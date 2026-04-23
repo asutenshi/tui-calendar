@@ -20,6 +20,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "textual>=0.80.0",
 ]
 
 [project.optional-dependencies]
