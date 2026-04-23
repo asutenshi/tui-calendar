@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tui-calendar"
+version = "0.1.0"
+description = "Vim-style TUI calendar and task manager with Markdown backend"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["tui", "calendar", "vim", "markdown", "todo"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Environment :: Console",
+    "Topic :: Office/Business :: Scheduling",
+]
+
+dependencies = [
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.4.0",
+    "pytest>=8.0.0",
+    "mypy>=1.10.0",
+]
+
+[project.scripts]
+tcal = "tui_calendar.main:run"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
