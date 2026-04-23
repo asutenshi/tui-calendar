@@ -11,7 +11,7 @@ class TuiCalApp(App):
     #hello {
         width: 40;
         height: 5;
-        border: heavy crystal white;
+        border: heavy white;
         content-align: center middle;
         background: $accent;
     }
