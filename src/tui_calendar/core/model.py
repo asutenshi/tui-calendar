@@ -1,12 +1,12 @@
-from pydantic import BaseModel, Field
 from datetime import date
-from typing import Optional, List
 from pathlib import Path
+
+from pydantic import BaseModel, Field
 
 
 class Event(BaseModel):
     date: date
     title: str = "Untitled"
-    status: Optional[str] = "todo"
-    tags: List[str] = Field(default_factory=list)
+    status: str | None = "todo"
+    tags: list[str] = Field(default_factory=list)
     path: Path
