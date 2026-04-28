@@ -1,9 +1,10 @@
 from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, Static
+from textual.widgets import Footer, Header, Static
+
 
 class TuiCalApp(App):
     """Минимальная заглушка приложения."""
-    
+
     CSS = """
     Screen {
         align: center middle;
@@ -27,9 +28,11 @@ class TuiCalApp(App):
         yield Static("📅 TUI Calendar MVP\nReady for development", id="hello")
         yield Footer()
 
+
 def run():
     app = TuiCalApp()
     app.run()
+
 
 if __name__ == "__main__":
     run()
