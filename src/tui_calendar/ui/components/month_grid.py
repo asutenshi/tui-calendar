@@ -99,4 +99,4 @@ class MonthGrid(Static):
         self._move(-7) 
 
     def action_move_down(self) -> None:
-        self._move(7) 
+        self._move(7)
