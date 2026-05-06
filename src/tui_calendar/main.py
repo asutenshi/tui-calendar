@@ -1,32 +1,57 @@
 from textual.app import App, ComposeResult
-from textual.widgets import Footer, Header, Static
+from textual.widgets import Header, Footer, Static, ContentSwitcher
+from tui_calendar.ui.components.month_grid import MonthGrid
+
+
+class WeekView(Static):
+    def compose(self) -> ComposeResult:
+        yield Static("🗓️ Week View (Columns will be here)")
+
+class DayView(Static):
+    def compose(self) -> ComposeResult:
+        yield Static("📝 Day View (To-Do list will be here)")
 
 
 class TuiCalApp(App):
-    """Минимальная заглушка приложения."""
-
+    """Основное приложение TUI Calendar."""
+    
     CSS = """
     Screen {
+        layout: vertical;
+    }
+    
+    ContentSwitcher {
+        height: 1fr;
         align: center middle;
     }
-    #hello {
-        width: 40;
-        height: 5;
-        border: heavy white;
+    
+    WeekView, DayView {
+        width: 100%;
+        height: 100%;
         content-align: center middle;
-        background: $accent;
     }
     """
 
     BINDINGS = [
         ("q", "quit", "Quit"),
-        ("d", "toggle_dark", "Toggle dark mode"),
+        ("m", "switch_view('month')", "Month"),
+        ("w", "switch_view('week')", "Week"),
+        ("d", "switch_view('day')", "Day"),
     ]
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Static("📅 TUI Calendar MVP\nReady for development", id="hello")
+        
+        with ContentSwitcher(initial="month", id="view-switcher"):
+            yield MonthGrid(id="month")  
+            yield WeekView(id="week")   
+            yield DayView(id="day")   
+            
         yield Footer()
+
+    def action_switch_view(self, view_id: str) -> None:
+        """Переключает текущий вид в ContentSwitcher."""
+        self.query_one("#view-switcher", ContentSwitcher).current = view_id
 
 
 def run():
