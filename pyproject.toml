@@ -21,6 +21,8 @@ classifiers = [
 
 dependencies = [
     "textual>=0.80.0",
+    "python-frontmatter",
+    "pydantic"
 ]
 
 [project.optional-dependencies]
@@ -46,10 +48,6 @@ ignore = []
 quote-style = "double"
 indent-style = "space"
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src"]
-
 [tool.mypy]
 python_version = "3.12"
 strict = true
@@ -57,3 +55,7 @@ ignore_missing_imports = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
