@@ -11,6 +11,7 @@ class WeekView(Static):
     def compose(self) -> ComposeResult:
         yield Static("🗓️ Week View (Columns will be here)")
 
+
 class DayView(Static):
     def compose(self) -> ComposeResult:
         yield Static("📝 Day View (To-Do list will be here)")
@@ -18,7 +19,7 @@ class DayView(Static):
 
 class TuiCalApp(App):
     """Основное приложение TUI Calendar."""
-    
+
     CSS = """
     Screen {
         layout: vertical;
@@ -41,17 +42,17 @@ class TuiCalApp(App):
         ("m", "switch_view('month')", "Month"),
         ("w", "switch_view('week')", "Week"),
         ("d", "switch_view('day')", "Day"),
-        ("c, n", "create_new", "Create_new")
+        ("c, n", "create_new", "Create_new"),
     ]
 
     def compose(self) -> ComposeResult:
         yield Header()
-        
+
         with ContentSwitcher(initial="month", id="view-switcher"):
-            yield MonthGrid(id="month")  
-            yield WeekView(id="week")   
-            yield DayView(id="day")   
-            
+            yield MonthGrid(id="month")
+            yield WeekView(id="week")
+            yield DayView(id="day")
+
         yield Footer()
 
     def action_switch_view(self, view_id: str) -> None:
