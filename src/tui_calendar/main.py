@@ -22,16 +22,19 @@ class TuiCalApp(App):
     
     ContentSwitcher {
         height: 1fr;
-        align: center middle;
     }
     
-    WeekView, DayView {
+    /* ЯВНО указываем MonthGrid занимать весь экран */
+    MonthGrid, WeekView, DayView {
         width: 100%;
         height: 100%;
+    }
+
+    WeekView, DayView {
         content-align: center middle;
     }
     """
-
+    
     BINDINGS = [
         ("q", "quit", "Quit"),
         ("m", "switch_view('month')", "Month"),

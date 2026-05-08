@@ -1,21 +1,22 @@
 import calendar
 from datetime import date
+
 from textual.app import ComposeResult
-from textual.widgets import Static
 from textual.binding import Binding
+from textual.widgets import Static
+
+
+class DayHeader(Static):
+    """Заголовок дня недели."""
+    pass
+
 
 class DayCell(Static):
-    """Виджет отдельной ячейки дня."""
-    
-    def __init__(self, day: int, is_current_month: bool):
-        super().__init__()
+    """Ячейка дня."""
+    def __init__(self, day: int):
+        content = "" if day == 0 else f"{day}\n[mock event]"
+        super().__init__(content)
         self.day = day
-        self.is_current_month = is_current_month
-
-    def render(self) -> str:
-        if self.day == 0 or not self.is_current_month:
-            return ""
-        return f"{self.day}\n[mock event]"
 
 
 class MonthGrid(Static):
@@ -30,41 +31,67 @@ class MonthGrid(Static):
         Binding("l", "move_right", "Right", show=False),
     ]
 
-    CSS = """
+    DEFAULT_CSS = """
     MonthGrid {
         layout: grid;
         grid-size: 7;
         grid-columns: 1fr;
-        grid-rows: 1fr;
-        grid-gutter: 1 2;
-        padding: 1;
+        grid-gutter: 0;               /* Убираем щели, чтобы сетка сшилась намертво */
+        width: 100%;
+        height: 100%;
+        border-top: solid $surface;   /* Верхняя крышка таблицы */
+        border-left: solid $surface;  /* Левая стенка таблицы */
+    }
+    
+    DayHeader {
+        content-align: center middle;
+        height: 3;
+        color: $text-muted;
+        text-style: bold;
+        border-right: solid $surface;
+        border-bottom: heavy $accent; /* Теперь оранжевая линия будет сплошной! */
     }
     
     DayCell {
-        border: solid $surface;
-        content-align: center middle;
+        border-right: solid $surface;
+        border-bottom: solid $surface;
+        content-align: left top;  
+        padding: 1;
         height: 100%;
     }
     
+    DayCell.-empty {
+        /* Пустые дни тоже рисуют границы, продолжая решетку */
+    }
+    
     DayCell.-active {
-        border: double $accent;
-        background: $boost;
+        background: $accent;
+        color: $background;
+        text-style: bold;
+        border-right: solid $surface;  /* Возвращаем темную рамку сетки */
+        border-bottom: solid $surface; /* Возвращаем темную рамку сетки */
     }
     """
 
     def compose(self) -> ComposeResult:
+        days_of_week = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+        for day_name in days_of_week:
+            yield DayHeader(day_name)
+
         today = date.today()
         cal = calendar.Calendar(firstweekday=0)
         
         for day in cal.itermonthdays(today.year, today.month):
-            yield DayCell(day=day, is_current_month=(day != 0))
+            cell = DayCell(day=day)
+            if day == 0:
+                cell.add_class("-empty")
+            yield cell
 
     def on_mount(self) -> None:
-        """Срабатывает после построения интерфейса."""
-        self.cells = list(self.query(DayCell))
+        self.day_cells = list(self.query(DayCell))
         self.current_index = 0
         
-        for i, cell in enumerate(self.cells):
+        for i, cell in enumerate(self.day_cells):
             if cell.day != 0:
                 self.current_index = i
                 break
@@ -73,21 +100,17 @@ class MonthGrid(Static):
         self.focus() 
 
     def _update_focus(self) -> None:
-        """Обновляет классы для подсветки активной ячейки."""
-        for i, cell in enumerate(self.cells):
+        for i, cell in enumerate(self.day_cells):
             if i == self.current_index:
                 cell.add_class("-active")
             else:
                 cell.remove_class("-active")
 
     def _move(self, delta: int) -> None:
-        """Вспомогательная функция для перемещения фокуса."""
         new_index = self.current_index + delta
-        
-        if 0 <= new_index < len(self.cells):
-            if self.cells[new_index].day != 0:
-                self.current_index = new_index
-                self._update_focus()
+        if 0 <= new_index < len(self.day_cells) and self.day_cells[new_index].day != 0:
+            self.current_index = new_index
+            self._update_focus()
 
     def action_move_left(self) -> None:
         self._move(-1)
