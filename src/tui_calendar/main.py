@@ -61,5 +61,6 @@ def run():
     app = TuiCalApp()
     app.run()
 
+
 if __name__ == "__main__":
     run()
