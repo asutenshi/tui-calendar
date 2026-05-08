@@ -36,11 +36,11 @@ class MonthGrid(Static):
         layout: grid;
         grid-size: 7;
         grid-columns: 1fr;
-        grid-gutter: 0;               /* Убираем щели, чтобы сетка сшилась намертво */
+        grid-gutter: 0;
         width: 100%;
         height: 100%;
-        border-top: solid $surface;   /* Верхняя крышка таблицы */
-        border-left: solid $surface;  /* Левая стенка таблицы */
+        border-top: solid $surface;
+        border-left: solid $surface;
     }
     
     DayHeader {
@@ -49,7 +49,7 @@ class MonthGrid(Static):
         color: $text-muted;
         text-style: bold;
         border-right: solid $surface;
-        border-bottom: heavy $accent; /* Теперь оранжевая линия будет сплошной! */
+        border-bottom: heavy $accent;
     }
     
     DayCell {
@@ -61,15 +61,20 @@ class MonthGrid(Static):
     }
     
     DayCell.-empty {
-        /* Пустые дни тоже рисуют границы, продолжая решетку */
+        /* Пустые дни */
+    }
+
+    DayCell.-today {
+        color: $success;     
+        text-style: bold;
     }
     
     DayCell.-active {
         background: $accent;
         color: $background;
         text-style: bold;
-        border-right: solid $surface;  /* Возвращаем темную рамку сетки */
-        border-bottom: solid $surface; /* Возвращаем темную рамку сетки */
+        border-right: solid $surface;
+        border-bottom: solid $surface;
     }
     """
 
@@ -85,6 +90,8 @@ class MonthGrid(Static):
             cell = DayCell(day=day)
             if day == 0:
                 cell.add_class("-empty")
+            elif day == today.day:
+                cell.add_class("-today") 
             yield cell
 
     def on_mount(self) -> None:
