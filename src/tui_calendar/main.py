@@ -56,7 +56,9 @@ class TuiCalApp(App):
         """Переключает текущий вид в ContentSwitcher."""
         self.query_one("#view-switcher", ContentSwitcher).current = view_id
 
-
+        if view_id == "month":
+            self.query_one("#month").focus()
+            
 def run():
     app = TuiCalApp()
     app.run()
