@@ -7,11 +7,7 @@ from textual.reactive import reactive
 
 from tui_calendar.ui.components.month_grid import MonthGrid
 from tui_calendar.ui.components.week_view import WeekView
-
-
-class DayView(Static):
-    def compose(self) -> ComposeResult:
-        yield Static("📝 Day View (To-Do list will be here)")
+from tui_calendar.ui.components.day_view import DayView
 
 
 class TuiCalApp(App):
@@ -76,6 +72,11 @@ class TuiCalApp(App):
         """Возвращает календарь к сегодняшней дате."""
         self.selected_date = date.today()
         self.action_switch_view("month")
+        
+        month_grid = self.query_one("#month")
+        month_grid.current_year = self.selected_date.year
+        month_grid.current_month = self.selected_date.month
+        month_grid._update_focus()
             
 def run():
     app = TuiCalApp()
