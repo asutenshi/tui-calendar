@@ -6,11 +6,8 @@ from textual.widgets import Header, Footer, Static, ContentSwitcher
 from textual.reactive import reactive
 
 from tui_calendar.ui.components.month_grid import MonthGrid
+from tui_calendar.ui.components.week_view import WeekView
 
-
-class WeekView(Static):
-    def compose(self) -> ComposeResult:
-        yield Static("🗓️ Week View (Columns will be here)")
 
 class DayView(Static):
     def compose(self) -> ComposeResult:
@@ -68,8 +65,7 @@ class TuiCalApp(App):
     def action_switch_view(self, view_id: str) -> None:
         """Переключает текущий вид в ContentSwitcher."""
         self.query_one("#view-switcher", ContentSwitcher).current = view_id
-        if view_id == "month":
-            self.query_one("#month").focus()
+        self.query_one(f"#{view_id}").focus()
 
     def watch_selected_date(self, old_val: date, new_val: date) -> None:
         """Автоматически обновляет подзаголовок при смене даты."""
