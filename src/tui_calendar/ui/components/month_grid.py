@@ -1,102 +1,181 @@
 import calendar
-from datetime import date
+from datetime import date, timedelta
+
 from textual.app import ComposeResult
-from textual.widgets import Static
 from textual.binding import Binding
+from textual.widgets import Static
+from textual.reactive import reactive
+
+class DayHeader(Static):
+    """Заголовок дня недели."""
+    pass
 
 class DayCell(Static):
-    """Виджет отдельной ячейки дня."""
-    
-    def __init__(self, day: int, is_current_month: bool):
-        super().__init__()
+    """Ячейка дня."""
+    def __init__(self, day: int):
+        content = "" if day == 0 else f"{day}\n[mock event]"
+        super().__init__(content)
         self.day = day
-        self.is_current_month = is_current_month
-
-    def render(self) -> str:
-        if self.day == 0 or not self.is_current_month:
-            return ""
-        return f"{self.day}\n[mock event]"
-
 
 class MonthGrid(Static):
     """Сетка месяца."""
     
     can_focus = True
 
+    current_year = reactive(date.today().year)
+    current_month = reactive(date.today().month)
+
     BINDINGS = [
         Binding("h", "move_left", "Left", show=False),
         Binding("j", "move_down", "Down", show=False),
         Binding("k", "move_up", "Up", show=False),
         Binding("l", "move_right", "Right", show=False),
+        Binding("ctrl+h", "prev_month", "Prev Month", show=False),
+        Binding("backspace", "prev_month", "Prev Month", show=True),
+        Binding("ctrl+l", "next_month", "Next Month", show=True),
     ]
 
-    CSS = """
+    DEFAULT_CSS = """
     MonthGrid {
         layout: grid;
         grid-size: 7;
+        grid-rows: 2 1fr 1fr 1fr 1fr 1fr 1fr;
         grid-columns: 1fr;
-        grid-rows: 1fr;
-        grid-gutter: 1 2;
-        padding: 1;
+        grid-gutter: 0;
+        width: 100%;
+        height: 100%;
+        border-top: solid $panel-lighten-3;  
+        border-left: solid $panel-lighten-3; 
+    }
+    
+    DayHeader {
+        content-align: center middle;
+        height: 2;                  
+        color: $text-muted;
+        text-style: bold;
+        border-right: solid $panel-lighten-3; 
+        border-bottom: heavy $accent;
     }
     
     DayCell {
-        border: solid $surface;
-        content-align: center middle;
+        border-right: solid $panel-lighten-3; 
+        border-bottom: solid $panel-lighten-3;
+        content-align: left top;  
+        padding: 1;
         height: 100%;
     }
     
+    DayCell.-empty {
+    }
+
+    DayCell.-today {
+        color: $success;
+        text-style: bold;
+    }
+    
     DayCell.-active {
-        border: double $accent;
         background: $boost;
+        color: $text;
+        text-style: bold;
     }
     """
 
     def compose(self) -> ComposeResult:
-        today = date.today()
-        cal = calendar.Calendar(firstweekday=0)
-        
-        for day in cal.itermonthdays(today.year, today.month):
-            yield DayCell(day=day, is_current_month=(day != 0))
+        days_of_week = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        for day_name in days_of_week:
+            yield DayHeader(day_name)
 
     def on_mount(self) -> None:
-        """Срабатывает после построения интерфейса."""
-        self.cells = list(self.query(DayCell))
-        self.current_index = 0
-        
-        for i, cell in enumerate(self.cells):
-            if cell.day != 0:
-                self.current_index = i
-                break
-                
+        self.day_cells = []
+        self.current_year = self.app.selected_date.year
+        self.current_month = self.app.selected_date.month
+        self.rebuild_grid() 
+
+    def rebuild_grid(self) -> None:
+        for cell in self.query(DayCell):
+            cell.remove()
+
+        today = date.today()
+        cal = calendar.Calendar(firstweekday=0)
+        self.day_cells = []
+
+        for day in cal.itermonthdays(self.current_year, self.current_month):
+            cell = DayCell(day=day)
+            if day == 0:
+                cell.add_class("-empty")
+            elif day == today.day and self.current_month == today.month and self.current_year == today.year:
+                cell.add_class("-today")
+            self.day_cells.append(cell)
+
+        self.mount(*self.day_cells)
         self._update_focus()
-        self.focus() 
+
+    def watch_current_month(self, old_val: int, new_val: int) -> None:
+        if old_val != new_val:
+            self.rebuild_grid()
+
+    def watch_current_year(self, old_val: int, new_val: int) -> None:
+        if old_val != new_val:
+            self.rebuild_grid()
 
     def _update_focus(self) -> None:
-        """Обновляет классы для подсветки активной ячейки."""
-        for i, cell in enumerate(self.cells):
-            if i == self.current_index:
+        """Синхронизирует фокус на сетке с self.app.selected_date"""
+        selected = self.app.selected_date
+        for cell in self.day_cells:
+            if cell.day == 0:
+                continue
+            if cell.day == selected.day and self.current_month == selected.month and self.current_year == selected.year:
                 cell.add_class("-active")
             else:
                 cell.remove_class("-active")
 
-    def _move(self, delta: int) -> None:
-        """Вспомогательная функция для перемещения фокуса."""
-        new_index = self.current_index + delta
+    def _change_date(self, delta_days: int) -> None:
+        """Умное перемещение с помощью timedelta. Никаких границ индексов!"""
+        new_date = self.app.selected_date + timedelta(days=delta_days)
+        self.app.selected_date = new_date  
         
-        if 0 <= new_index < len(self.cells):
-            if self.cells[new_index].day != 0:
-                self.current_index = new_index
-                self._update_focus()
+      
+        if new_date.month != self.current_month or new_date.year != self.current_year:
+            self.current_year = new_date.year
+            self.current_month = new_date.month
+        else:
+            self._update_focus()
 
     def action_move_left(self) -> None:
-        self._move(-1)
+        self._change_date(-1)
 
     def action_move_right(self) -> None:
-        self._move(1)
+        self._change_date(1)
 
     def action_move_up(self) -> None:
-        self._move(-7) 
+        self._change_date(-7)
 
     def action_move_down(self) -> None:
-        self._move(7)
+        self._change_date(7)
+
+    def action_prev_month(self) -> None:
+        y, m = self.current_year, self.current_month
+        m -= 1
+        if m == 0:
+            m, y = 12, y - 1
+            
+        d = min(self.app.selected_date.day, calendar.monthrange(y, m)[1])
+        self.app.selected_date = date(y, m, d)
+        self.current_year, self.current_month = y, m
+
+    def action_next_month(self) -> None:
+        y, m = self.current_year, self.current_month
+        m += 1
+        if m == 13:
+            m, y = 1, y + 1
+            
+        d = min(self.app.selected_date.day, calendar.monthrange(y, m)[1])
+        self.app.selected_date = date(y, m, d)
+        self.current_year, self.current_month = y, m
+
+    def on_show(self) -> None:
+        """Срабатывает каждый раз, когда мы возвращаемся с видов Week/Day на Month"""
+        self.current_year = self.app.selected_date.year
+        self.current_month = self.app.selected_date.month
+        self._update_focus()
+        self.focus()
