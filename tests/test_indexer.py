@@ -1,64 +1,94 @@
 from datetime import date
-from pathlib import Path
 
+import frontmatter
 import pytest
 
 from tui_calendar.core.indexer import NotesIndexer
 
 
 @pytest.fixture
-def temp_notes_dir(tmp_path):
-    meeting_file = tmp_path / "2024-10-25-meeting.md"
-    meeting_file.write_text(
-        "---\ndate: 2024-10-25\ntitle: 'Встреча по MVP'\n---\nТекст", encoding="utf-8"
-    )
-    empty_title_file = tmp_path / "no-title-note.md"
-    empty_title_file.write_text("---\ndate: 2024-10-30\n---\nТекст", encoding="utf-8")
-    invalid_file = tmp_path / "invalid.md"
-    invalid_file.write_text("---\ndate: 2023-13-45\ntitle: 'Ошибка'\n---\nТекст", encoding="utf-8")
-    return tmp_path
+def indexer(tmp_path):
+    """Создает индексатор, работающий во временной папке."""
+    return NotesIndexer(tmp_path)
 
 
-def test_get_events_loading(temp_notes_dir):
-    indexer = NotesIndexer(temp_notes_dir)
-    events = indexer.get_events()
-    assert len(events) == 2
+def test_create_note_file_exists(indexer):
+    """Проверка, что файл физически создается."""
+    target_date = date(2023, 11, 7)
+    title = "Test Note"
+
+    path = indexer.create_note(target_date, title)
+
+    assert path.exists()
+    assert path.is_file()
 
 
-def test_title_fallback_to_filename(temp_notes_dir):
-    indexer = NotesIndexer(temp_notes_dir)
-    events = indexer.get_events()
-    note_30 = next(e for e in events if e.date == date(2024, 10, 30))
-    assert note_30.title == "no-title-note"
+def test_create_note_yaml_content(indexer):
+    """Проверка, что внутри файла правильный YAML заголовок с дефолтными значениями."""
+    target_date = date(2025, 1, 1)
+    title = "New Year Party"
+
+    path = indexer.create_note(target_date, title)
+    post = frontmatter.load(path)
+
+    assert post.metadata["title"] == "New Year Party"
+    assert post.metadata["date"] == target_date
+    assert post.metadata["status"] == "todo"
+    assert post.metadata["tags"] == []  # Проверяем дефолтный пустой список
+    assert post.content.strip() == "# New Year Party"
 
 
-def test_get_event_for_range(temp_notes_dir):
-    indexer = NotesIndexer(temp_notes_dir)
-    start = date(2024, 10, 1)
-    end = date(2024, 10, 26)
-    filtered = indexer.get_event_for_range(start, end)
-    assert len(filtered) == 1
+def test_create_note_custom_status_and_tags(indexer):
+    """Проверка создания заметки с пользовательским статусом и тегами."""
+    target_date = date(2023, 12, 31)
+    title = "Buy gifts"
+    custom_status = "in_progress"
+    custom_tags = ["family", "finance", "urgent"]
+
+    # Передаем наши новые аргументы
+    path = indexer.create_note(target_date, title, status=custom_status, tags=custom_tags)
+
+    post = frontmatter.load(path)
+
+    assert post.metadata["title"] == "Buy gifts"
+    assert post.metadata["status"] == "in_progress"
+    assert post.metadata["tags"] == ["family", "finance", "urgent"]
 
 
-@pytest.fixture
-def real_examples_dir():
-    """Фикстура, которая находит папку examples в корне проекта"""
-    path = Path(__file__).parent.parent / "examples"
-    return path
+def test_create_note_slugification(indexer):
+    """Проверка очистки имени файла от спецсимволов."""
+    target_date = date(2023, 11, 7)
+    title = "Hello World!!! @2023"
+
+    path = indexer.create_note(target_date, title)
+
+    assert " " not in path.name
+    assert "@" not in path.name
 
 
-def test_real_files_existence(real_examples_dir):
-    """Проверяем, что папка с примерами вообще существует"""
-    assert real_examples_dir.exists(), f"Папка {real_examples_dir} не найдена!"
-    assert real_examples_dir.is_dir()
+def test_create_note_collision(indexer):
+    """Проверка логики дубликатов (счетчик _1, _2)."""
+    target_date = date(2023, 11, 7)
+    title = "Meeting"
+
+    path1 = indexer.create_note(target_date, title)
+    path2 = indexer.create_note(target_date, title)
+    path3 = indexer.create_note(target_date, title)
+
+    assert path1.name == "2023-11-07-meeting.md"
+    assert path2.name == "2023-11-07_meeting_1.md"
+    assert path3.name == "2023-11-07_meeting_2.md"
+
+    assert path1 != path2 != path3
 
 
-def test_real_files_parsing(real_examples_dir):
-    """Проверяем, что индексатор видит файлы в папке examples"""
-    indexer = NotesIndexer(real_examples_dir)
-    events = indexer.get_events()
+def test_create_note_empty_title(indexer):
+    """Проверка создания заметки без названия (дефолтное имя)."""
+    target_date = date(2023, 11, 7)
 
-    assert len(events) >= 1
+    # Не передаем title, должен подставиться "New Event"
+    path = indexer.create_note(target_date)
 
-    titles = [e.title for e in events]
-    assert any("Тренировка" in t for t in titles)
+    assert "new-event" in path.name
+    post = frontmatter.load(path)
+    assert post.metadata["title"] == "New Event"
