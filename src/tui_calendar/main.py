@@ -42,7 +42,6 @@ class TuiCalApp(App):
         ("m", "switch_view('month')", "Month"),
         ("w", "switch_view('week')", "Week"),
         ("d", "switch_view('day')", "Day"),
-        ("c, n", "create_new", "Create_new"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -65,11 +64,6 @@ class TuiCalApp(App):
         notes_path = project_root.parent.parent / "examples" / "created_notes"
         self.indexer = NotesIndexer(notes_path)
         self.selected_date = date.today()
-
-    def action_create_new(self) -> None:
-        """Логика нажатия 'c' или 'n'"""
-        new_file = self.indexer.create_note(self.selected_date, title="Untitled")
-        self.notify(f"Created: {new_file.name}", title="Success", severity="information")
 
 
 def run():

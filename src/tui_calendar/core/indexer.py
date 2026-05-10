@@ -2,7 +2,7 @@ from datetime import date
 from pathlib import Path
 
 import frontmatter
-from pydantic import ValidationError
+from pydantic import ValidationError, Field
 
 from .model import Event
 
@@ -48,7 +48,13 @@ class NotesIndexer:
         all_events = self.get_events()
         return [e for e in all_events if start_date <= e.date <= end_date]
 
-    def create_note(self, target_date: date, title: str = "New Event") -> Path:
+    def create_note(
+        self,
+        target_date: date,
+        title: str = "New Event",
+        status: str | None = "todo",
+        tags: list[str] = Field(default_factory=list),
+    ) -> Path:
         safe_title = "".join([c if c.isalnum() else "-" for c in title.lower()]).strip("-")
         filename = f"{target_date}-{safe_title}.md"
         file_path = self.directory / filename
@@ -59,7 +65,7 @@ class NotesIndexer:
             counter += 1
 
         post = frontmatter.Post(
-            content="# " + title, date=target_date, title=title, status="todo", tags=[]
+            content="# " + title, date=target_date, title=title, status=status, tags=tags
         )
 
         with open(file_path, "wb") as f:
