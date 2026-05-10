@@ -53,8 +53,10 @@ class NotesIndexer:
         target_date: date,
         title: str = "New Event",
         status: str | None = "todo",
-        tags: list[str] = Field(default_factory=list),
+        tags: list[str] | None = None,
     ) -> Path:
+        if tags is None:
+            tags = []
         safe_title = "".join([c if c.isalnum() else "-" for c in title.lower()]).strip("-")
         filename = f"{target_date}-{safe_title}.md"
         file_path = self.directory / filename
