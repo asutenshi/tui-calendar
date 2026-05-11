@@ -69,14 +69,20 @@ class TuiCalApp(App):
         self.sub_title = f"{month_name} {new_val.year}"
 
     def action_go_today(self) -> None:
-        """Возвращает календарь к сегодняшней дате."""
+        """Возвращает календарь к сегодняшней дате в текущем активном виде."""
         self.selected_date = date.today()
-        self.action_switch_view("month")
         
-        month_grid = self.query_one("#month")
-        month_grid.current_year = self.selected_date.year
-        month_grid.current_month = self.selected_date.month
-        month_grid._update_focus()
+        current_view = self.query_one("#view-switcher").current
+        
+        if current_view == "month":
+            month_grid = self.query_one("#month")
+            month_grid.current_year = self.selected_date.year
+            month_grid.current_month = self.selected_date.month
+            month_grid._update_focus()
+        elif current_view == "week":
+            self.query_one("#week").rebuild_week()
+        elif current_view == "day":
+            self.query_one("#day").rebuild_day()
             
 def run():
     app = TuiCalApp()
