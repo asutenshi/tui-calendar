@@ -4,17 +4,20 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.widgets import Static
 
+
 class DayColumn(Static):
     """Колонка одного дня в неделе."""
+
     def __init__(self, current_date: date):
         # Форматируем заголовок: например, "Mon 25"
         header = current_date.strftime("%a %d")
         super().__init__(f"{header}\n\n[mock tasks]")
         self.date = current_date
 
+
 class WeekView(Static):
     """Отображение недели (7 колонок)."""
-    
+
     can_focus = True
 
     BINDINGS = [
@@ -58,18 +61,18 @@ class WeekView(Static):
     def rebuild_week(self) -> None:
         selected = self.app.selected_date
         start_of_week = selected - timedelta(days=selected.weekday())
-        
+
         columns = self.query(DayColumn)
         if not columns:
             return
-            
+
         for i, col in enumerate(columns):
             current_day = start_of_week + timedelta(days=i)
             col.date = current_day
-            
+
             header = current_day.strftime("%a %d")
             col.update(f"{header}\n\n[mock tasks]")
-            
+
             if current_day == selected:
                 col.add_class("-active")
             else:
@@ -91,7 +94,7 @@ class WeekView(Static):
 
     def action_move_down(self) -> None:
         self._change_date(7)
-        
+
     def on_show(self) -> None:
         """При переключении на этот вид обновляем данные и забираем фокус."""
         self.rebuild_week()

@@ -12,13 +12,24 @@ from tui_calendar.ui.components.day_view import DayView
 
 class TuiCalApp(App):
     """Основное приложение TUI Calendar."""
-    
+
     selected_date = reactive(date.today())
 
     TITLE = "TUI Calendar"
     MONTH_NAMES = [
-        "", "January", "February", "March", "April", "May", "June", 
-        "July", "August", "September", "October", "November", "December"
+        "",
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
     ]
 
     CSS = """
@@ -39,23 +50,23 @@ class TuiCalApp(App):
         content-align: center middle;
     }
     """
-    
+
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("m", "switch_view('month')", "Month"),
         Binding("w", "switch_view('week')", "Week"),
         Binding("d", "switch_view('day')", "Day"),
-        Binding("t", "go_today", "Today"),  
+        Binding("t", "go_today", "Today"),
     ]
 
     def compose(self) -> ComposeResult:
         yield Header()
-        
+
         with ContentSwitcher(initial="month", id="view-switcher"):
-            yield MonthGrid(id="month")  
-            yield WeekView(id="week")   
-            yield DayView(id="day")   
-            
+            yield MonthGrid(id="month")
+            yield WeekView(id="week")
+            yield DayView(id="day")
+
         yield Footer()
 
     def action_switch_view(self, view_id: str) -> None:
@@ -71,9 +82,9 @@ class TuiCalApp(App):
     def action_go_today(self) -> None:
         """Возвращает календарь к сегодняшней дате в текущем активном виде."""
         self.selected_date = date.today()
-        
+
         current_view = self.query_one("#view-switcher").current
-        
+
         if current_view == "month":
             month_grid = self.query_one("#month")
             month_grid.current_year = self.selected_date.year
@@ -83,10 +94,12 @@ class TuiCalApp(App):
             self.query_one("#week").rebuild_week()
         elif current_view == "day":
             self.query_one("#day").rebuild_day()
-            
+
+
 def run():
     app = TuiCalApp()
     app.run()
+
 
 if __name__ == "__main__":
     run()
