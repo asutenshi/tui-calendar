@@ -56,26 +56,24 @@ class WeekView(Static):
         self.rebuild_week()
 
     def rebuild_week(self) -> None:
-        """Перерисовывает колонки для текущей недели."""
-        for col in self.query(DayColumn):
-            col.remove()
-
         selected = self.app.selected_date
-        # Находим понедельник текущей недели (0 = Пн, 6 = Вс)
         start_of_week = selected - timedelta(days=selected.weekday())
-
-        cols = []
-        for i in range(7):
-            current_day = start_of_week + timedelta(days=i)
-            col = DayColumn(current_day)
+        
+        columns = self.query(DayColumn)
+        if not columns:
+            return
             
-            # Подсвечиваем активный день "блочным курсором"
+        for i, col in enumerate(columns):
+            current_day = start_of_week + timedelta(days=i)
+            col.date = current_day
+            
+            header = current_day.strftime("%a %d")
+            col.update(f"{header}\n\n[mock tasks]")
+            
             if current_day == selected:
                 col.add_class("-active")
-                
-            cols.append(col)
-
-        self.mount(*cols)
+            else:
+                col.remove_class("-active")
 
     def _change_date(self, delta_days: int) -> None:
         """Меняет глобальную дату и перерисовывает неделю."""
