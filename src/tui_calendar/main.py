@@ -1,4 +1,5 @@
 from datetime import date
+from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -8,7 +9,7 @@ from textual.widgets import ContentSwitcher, Footer, Header
 from tui_calendar.ui.components.day_view import DayView
 from tui_calendar.ui.components.month_grid import MonthGrid
 from tui_calendar.ui.components.week_view import WeekView
-
+from tui_calendar.core.indexer import NotesIndexer
 
 class TuiCalApp(App):
     """Основное приложение TUI Calendar."""
@@ -58,6 +59,12 @@ class TuiCalApp(App):
         Binding("d", "switch_view('day')", "Day"),
         Binding("t", "go_today", "Today"),
     ]
+
+    def __init__(self):
+        super().__init__()
+        self.indexer = NotesIndexer("./notes") 
+
+    selected_date = reactive(date.today())
 
     def compose(self) -> ComposeResult:
         yield Header()

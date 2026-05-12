@@ -1,5 +1,6 @@
 import calendar
 from datetime import date, timedelta
+from tui_calendar.core.model import Event
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -14,16 +15,28 @@ class DayHeader(Static):
 
 
 class DayCell(Static):
-    """Ячейка дня."""
+    """Ячейка дня с отрисовкой событий."""
 
-    def __init__(self, day: int):
+    def __init__(self, day: int, events: list[Event] = None):
         super().__init__()
         self.day = day
+        self.events = events or []
 
     def compose(self) -> ComposeResult:
-        content = "" if self.day == 0 else f"{self.day}\n[mock event]"
-        yield Static(content, classes="inner-cell", expand=True)
-
+        with Static(classes="inner-cell", expand=True) as container:
+            if self.day != 0:
+                yield Static(str(self.day), classes="day-number")
+                
+                visible_events = self.events[:3]
+                for event in visible_events:
+                    status_class = f"-{event.status}" if event.status else ""
+                    yield Static(
+                        event.title, 
+                        classes=f"event-pill {status_class}"
+                    )
+                
+                if len(self.events) > 3:
+                    yield Static(f"+ {len(self.events) - 3} more...", classes="more-indicator")
 
 class MonthGrid(Static):
     """Сетка месяца."""
@@ -53,7 +66,7 @@ class MonthGrid(Static):
         width: 100%;
         height: 100%;
         border-top: solid $panel-lighten-3;  
-        border-left: solid $panel-lighten-3; 
+        border-left: solid $panel-lighten-3;
     }
     
     DayHeader {
@@ -68,8 +81,7 @@ class MonthGrid(Static):
     DayCell {
         border-right: solid $panel-lighten-3;
         border-bottom: solid $panel-lighten-3;
-        /* Убираем все отступы у внешней ячейки, она только держит рамки */
-        padding: 0; 
+        padding: 0;
         margin: 0;
         width: 100%;
         height: 100%;
@@ -78,7 +90,55 @@ class MonthGrid(Static):
     DayCell .inner-cell {
         width: 100%;
         height: 100%;
-        padding: 0 1; /* Отступы для текста перенесли сюда */
+        padding: 0 1;
+        layout: vertical;
+        overflow-y: hidden;
+    }
+    
+    .day-number {
+        width: 100%;
+        content-align: right top;
+        color: $text-muted;
+        margin-bottom: 1; 
+    }
+
+    DayCell.-today .day-number {
+        color: $success;
+        text-style: bold;
+    }
+
+    .event-pill {
+        background: $panel-lighten-1; 
+        border-left: solid $accent;   
+        color: $text;
+        padding: 0 1;
+        width: 100%;
+        height: 1;
+        margin-bottom: 1; 
+        content-align: left middle;
+        
+        /* Та самая обрезка длинного текста */
+        overflow-x: hidden; 
+    }
+
+    .event-pill.-todo {
+        border-left: solid $warning; 
+    }
+
+    .event-pill.-in_progress {
+        border-left: solid $accent;  
+    }
+
+    .event-pill.-done {
+        border-left: solid $success; 
+        text-style: dim;             
+        color: $text-muted;
+    }
+
+    .more-indicator {
+        color: $text-muted;
+        text-style: italic;
+        margin-left: 1;
     }
 
     DayCell.-empty .inner-cell {
@@ -90,13 +150,11 @@ class MonthGrid(Static):
         text-style: bold;
     }
     
-    /* Красим ТОЛЬКО внутренний блок, теперь он не подтечет под рамки */
     DayCell.-active .inner-cell {
         background: $boost;
         color: $text;
         text-style: bold;
     }
-    
     """
 
     def compose(self) -> ComposeResult:
@@ -105,33 +163,38 @@ class MonthGrid(Static):
             yield DayHeader(day_name)
 
     def on_mount(self) -> None:
-        self.day_cells = []
+        self.day_cells = [] 
         self.current_year = self.app.selected_date.year
         self.current_month = self.app.selected_date.month
         self.rebuild_grid()
 
     def rebuild_grid(self) -> None:
-        for cell in self.query(DayCell):
-            cell.remove()
+        self.query(DayCell).remove()
+        self.day_cells = [] 
+
+        start_date = date(self.current_year, self.current_month, 1)
+        end_date = start_date + timedelta(days=32) 
+        all_month_events = self.app.indexer.get_event_for_range(start_date, end_date)
 
         today = date.today()
         cal = calendar.Calendar(firstweekday=0)
-        self.day_cells = []
-
+        
         for day in cal.itermonthdays(self.current_year, self.current_month):
-            cell = DayCell(day=day)
+            day_events = [e for e in all_month_events if e.date.day == day] if day != 0 else []
+            
+            cell = DayCell(day=day, events=day_events)
+            
             if day == 0:
                 cell.add_class("-empty")
-            elif (
-                day == today.day
-                and self.current_month == today.month
-                and self.current_year == today.year
-            ):
+            elif (day == today.day and 
+                  self.current_month == today.month and 
+                  self.current_year == today.year):
                 cell.add_class("-today")
+                
             self.day_cells.append(cell)
 
-        self.mount(*self.day_cells)
-        self._update_focus()
+        self.mount(*self.day_cells) 
+        self._update_focus() 
 
     def watch_current_month(self, old_val: int, new_val: int) -> None:
         if old_val != new_val:
