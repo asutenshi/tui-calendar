@@ -3,8 +3,8 @@ from datetime import date, timedelta
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.widgets import Static
 from textual.reactive import reactive
+from textual.widgets import Static
 
 
 class DayHeader(Static):

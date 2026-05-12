@@ -2,12 +2,12 @@ from datetime import date
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Header, Footer, Static, ContentSwitcher
 from textual.reactive import reactive
+from textual.widgets import ContentSwitcher, Footer, Header
 
+from tui_calendar.ui.components.day_view import DayView
 from tui_calendar.ui.components.month_grid import MonthGrid
 from tui_calendar.ui.components.week_view import WeekView
-from tui_calendar.ui.components.day_view import DayView
 
 
 class TuiCalApp(App):
