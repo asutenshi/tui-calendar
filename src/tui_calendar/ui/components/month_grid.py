@@ -6,20 +6,25 @@ from textual.binding import Binding
 from textual.widgets import Static
 from textual.reactive import reactive
 
+
 class DayHeader(Static):
     """Заголовок дня недели."""
+
     pass
+
 
 class DayCell(Static):
     """Ячейка дня."""
+
     def __init__(self, day: int):
         content = "" if day == 0 else f"{day}\n[mock event]"
         super().__init__(content)
         self.day = day
 
+
 class MonthGrid(Static):
     """Сетка месяца."""
-    
+
     can_focus = True
 
     current_year = reactive(date.today().year)
@@ -89,7 +94,7 @@ class MonthGrid(Static):
         self.day_cells = []
         self.current_year = self.app.selected_date.year
         self.current_month = self.app.selected_date.month
-        self.rebuild_grid() 
+        self.rebuild_grid()
 
     def rebuild_grid(self) -> None:
         for cell in self.query(DayCell):
@@ -103,7 +108,11 @@ class MonthGrid(Static):
             cell = DayCell(day=day)
             if day == 0:
                 cell.add_class("-empty")
-            elif day == today.day and self.current_month == today.month and self.current_year == today.year:
+            elif (
+                day == today.day
+                and self.current_month == today.month
+                and self.current_year == today.year
+            ):
                 cell.add_class("-today")
             self.day_cells.append(cell)
 
@@ -124,7 +133,11 @@ class MonthGrid(Static):
         for cell in self.day_cells:
             if cell.day == 0:
                 continue
-            if cell.day == selected.day and self.current_month == selected.month and self.current_year == selected.year:
+            if (
+                cell.day == selected.day
+                and self.current_month == selected.month
+                and self.current_year == selected.year
+            ):
                 cell.add_class("-active")
             else:
                 cell.remove_class("-active")
@@ -132,9 +145,8 @@ class MonthGrid(Static):
     def _change_date(self, delta_days: int) -> None:
         """Умное перемещение с помощью timedelta. Никаких границ индексов!"""
         new_date = self.app.selected_date + timedelta(days=delta_days)
-        self.app.selected_date = new_date  
-        
-      
+        self.app.selected_date = new_date
+
         if new_date.month != self.current_month or new_date.year != self.current_year:
             self.current_year = new_date.year
             self.current_month = new_date.month
@@ -158,7 +170,7 @@ class MonthGrid(Static):
         m -= 1
         if m == 0:
             m, y = 12, y - 1
-            
+
         d = min(self.app.selected_date.day, calendar.monthrange(y, m)[1])
         self.app.selected_date = date(y, m, d)
         self.current_year, self.current_month = y, m
@@ -168,7 +180,7 @@ class MonthGrid(Static):
         m += 1
         if m == 13:
             m, y = 1, y + 1
-            
+
         d = min(self.app.selected_date.day, calendar.monthrange(y, m)[1])
         self.app.selected_date = date(y, m, d)
         self.current_year, self.current_month = y, m
