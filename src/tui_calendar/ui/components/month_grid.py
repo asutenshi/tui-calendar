@@ -1,11 +1,12 @@
 import calendar
 from datetime import date, timedelta
-from tui_calendar.core.model import Event
 
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.reactive import reactive
 from textual.widgets import Static
+
+from tui_calendar.core.model import Event
 
 
 class DayHeader(Static):
@@ -27,7 +28,7 @@ class DayCell(Static):
             if self.day != 0:
                 yield Static(str(self.day), classes="day-number")
                 
-                visible_events = self.events[:3]
+                visible_events = self.events[:2]
                 for event in visible_events:
                     status_class = f"-{event.status}" if event.status else ""
                     yield Static(
@@ -35,8 +36,8 @@ class DayCell(Static):
                         classes=f"event-pill {status_class}"
                     )
                 
-                if len(self.events) > 3:
-                    yield Static(f"+ {len(self.events) - 3} more...", classes="more-indicator")
+                if len(self.events) > 2:
+                    yield Static(f"+ {len(self.events) - 2} more...", classes="more-indicator")
 
 class MonthGrid(Static):
     """Сетка месяца."""
@@ -90,7 +91,7 @@ class MonthGrid(Static):
     DayCell .inner-cell {
         width: 100%;
         height: 100%;
-        padding: 0 1;
+        padding: 0;
         layout: vertical;
         overflow-y: hidden;
     }
@@ -99,6 +100,7 @@ class MonthGrid(Static):
         width: 100%;
         content-align: right top;
         color: $text-muted;
+        padding-right: 1; 
         margin-bottom: 1; 
     }
 
@@ -108,37 +110,37 @@ class MonthGrid(Static):
     }
 
     .event-pill {
-        background: $panel-lighten-1; 
-        border-left: solid $accent;   
-        color: $text;
-        padding: 0 1;
         width: 100%;
         height: 1;
         margin-bottom: 1; 
+        padding: 0 1; 
         content-align: left middle;
-        
-        /* Та самая обрезка длинного текста */
-        overflow-x: hidden; 
+        overflow-x: hidden;
     }
 
     .event-pill.-todo {
-        border-left: solid $warning; 
+        border-left: solid $warning;
+        background: $warning 15%;
+        color: $text;
     }
 
     .event-pill.-in_progress {
-        border-left: solid $accent;  
+        border-left: solid $accent;
+        background: $accent 15%;
+        color: $text;
     }
 
     .event-pill.-done {
-        border-left: solid $success; 
-        text-style: dim;             
+        border-left: solid $success;
+        background: $success 15%;
         color: $text-muted;
+        text-style: dim;
     }
 
     .more-indicator {
         color: $text-muted;
         text-style: italic;
-        margin-left: 1;
+        margin-left: 1; 
     }
 
     DayCell.-empty .inner-cell {

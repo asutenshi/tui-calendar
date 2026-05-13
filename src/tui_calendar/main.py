@@ -1,15 +1,15 @@
 from datetime import date
-from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.reactive import reactive
 from textual.widgets import ContentSwitcher, Footer, Header
 
+from tui_calendar.core.indexer import NotesIndexer
 from tui_calendar.ui.components.day_view import DayView
 from tui_calendar.ui.components.month_grid import MonthGrid
 from tui_calendar.ui.components.week_view import WeekView
-from tui_calendar.core.indexer import NotesIndexer
+
 
 class TuiCalApp(App):
     """Основное приложение TUI Calendar."""
