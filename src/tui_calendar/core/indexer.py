@@ -2,7 +2,7 @@ from datetime import date
 from pathlib import Path
 
 import frontmatter
-from pydantic import ValidationError, Field
+from pydantic import ValidationError
 
 from .model import Event
 
