@@ -3,8 +3,8 @@ from datetime import date, timedelta
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.widgets import Static
 from textual.reactive import reactive
+from textual.widgets import Static
 
 
 class DayHeader(Static):
@@ -17,9 +17,12 @@ class DayCell(Static):
     """Ячейка дня."""
 
     def __init__(self, day: int):
-        content = "" if day == 0 else f"{day}\n[mock event]"
-        super().__init__(content)
+        super().__init__()
         self.day = day
+
+    def compose(self) -> ComposeResult:
+        content = "" if self.day == 0 else f"{self.day}\n[mock event]"
+        yield Static(content, classes="inner-cell", expand=True)
 
 
 class MonthGrid(Static):
@@ -63,26 +66,37 @@ class MonthGrid(Static):
     }
     
     DayCell {
-        border-right: solid $panel-lighten-3; 
+        border-right: solid $panel-lighten-3;
         border-bottom: solid $panel-lighten-3;
-        content-align: left top;  
-        padding: 1;
+        /* Убираем все отступы у внешней ячейки, она только держит рамки */
+        padding: 0; 
+        margin: 0;
+        width: 100%;
         height: 100%;
     }
-    
-    DayCell.-empty {
+
+    DayCell .inner-cell {
+        width: 100%;
+        height: 100%;
+        padding: 0 1; /* Отступы для текста перенесли сюда */
     }
 
-    DayCell.-today {
+    DayCell.-empty .inner-cell {
+        background: $background;
+    }
+
+    DayCell.-today .inner-cell {
         color: $success;
         text-style: bold;
     }
     
-    DayCell.-active {
+    /* Красим ТОЛЬКО внутренний блок, теперь он не подтечет под рамки */
+    DayCell.-active .inner-cell {
         background: $boost;
         color: $text;
         text-style: bold;
     }
+    
     """
 
     def compose(self) -> ComposeResult:

@@ -7,12 +7,13 @@ from textual.widgets import Static
 
 class DayColumn(Static):
     """Колонка одного дня в неделе."""
+    def __init__(self, day_date: date):
+        super().__init__()
+        self.date = day_date
 
-    def __init__(self, current_date: date):
-        # Форматируем заголовок: например, "Mon 25"
-        header = current_date.strftime("%a %d")
-        super().__init__(f"{header}\n\n[mock tasks]")
-        self.date = current_date
+    def compose(self) -> ComposeResult:
+        header = self.date.strftime("%a %d")
+        yield Static(f"{header}\n\n[mock tasks]", classes="inner-cell", expand=True)
 
 
 class WeekView(Static):
@@ -40,47 +41,64 @@ class WeekView(Static):
     DayColumn {
         border-right: solid $panel-lighten-3;
         border-bottom: solid $panel-lighten-3;
-        content-align: center top;
-        padding: 1;
+        padding: 0;
+        margin: 0;
+        width: 1fr;
         height: 100%;
     }
 
-    DayColumn.-active {
+    DayColumn .inner-cell {
+        width: 100%;
+        height: 100%;
+        padding: 0 1;
+    }
+
+    DayColumn.-active .inner-cell {
         background: $boost;
+        color: $text;
+        text-style: bold;
     }
     """
 
-    def compose(self) -> ComposeResult:
-        # При создании виджета отдаем 7 пустых колонок, они заполнятся в on_mount
-        for _ in range(7):
-            yield DayColumn(date.today())
-
     def on_mount(self) -> None:
+        self._rendered_monday = None  
         self.rebuild_week()
+
+    def _get_monday(self, d: date) -> date:
+        return d - timedelta(days=d.weekday())
 
     def rebuild_week(self) -> None:
         selected = self.app.selected_date
-        start_of_week = selected - timedelta(days=selected.weekday())
-
-        columns = self.query(DayColumn)
-        if not columns:
+        target_monday = self._get_monday(selected)
+        
+        if self._rendered_monday == target_monday:
+            self._update_focus()
             return
+            
+        self.query(DayColumn).remove()
+        self._rendered_monday = target_monday
+        
+        columns = []
+        for i in range(7):
+            current_date = target_monday + timedelta(days=i)
+            col = DayColumn(current_date)
+            if current_date == selected:
+                col.add_class("-active")
+            columns.append(col)
+            
+        self.mount(*columns)
 
-        for i, col in enumerate(columns):
-            current_day = start_of_week + timedelta(days=i)
-            col.date = current_day
-
-            header = current_day.strftime("%a %d")
-            col.update(f"{header}\n\n[mock tasks]")
-
-            if current_day == selected:
+    def _update_focus(self) -> None:
+        selected = self.app.selected_date
+        for col in self.query(DayColumn):
+            if col.date == selected:
                 col.add_class("-active")
             else:
                 col.remove_class("-active")
 
     def _change_date(self, delta_days: int) -> None:
-        """Меняет глобальную дату и перерисовывает неделю."""
         self.app.selected_date += timedelta(days=delta_days)
+    
         self.rebuild_week()
 
     def action_move_left(self) -> None:
@@ -96,6 +114,6 @@ class WeekView(Static):
         self._change_date(7)
 
     def on_show(self) -> None:
-        """При переключении на этот вид обновляем данные и забираем фокус."""
+        """Срабатывает при возврате в вид недели."""
         self.rebuild_week()
         self.focus()
