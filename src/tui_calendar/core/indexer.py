@@ -1,8 +1,10 @@
+import os
+import subprocess
 from datetime import date
 from pathlib import Path
 
 import frontmatter
-from pydantic import ValidationError, Field
+from pydantic import ValidationError
 
 from .model import Event
 
@@ -74,3 +76,18 @@ class NotesIndexer:
             frontmatter.dump(post, f)
 
         return file_path
+
+    def open_file_in_editor(self, file_path: Path):
+        """
+        Открывает файл в редакторе, определенном в $EDITOR.
+
+        Args:
+            file_path: Путь к файлу для открытия.
+        """
+        editor = os.environ.get("EDITOR", "nano")
+        try:
+            subprocess.run([editor, str(file_path)], check=True)
+        except FileNotFoundError:
+            raise
+
+        return self.get_events()
