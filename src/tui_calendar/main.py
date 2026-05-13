@@ -2,12 +2,13 @@ from datetime import date
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Header, Footer, Static, ContentSwitcher
 from textual.reactive import reactive
+from textual.widgets import ContentSwitcher, Footer, Header
 
+from tui_calendar.core.indexer import NotesIndexer
+from tui_calendar.ui.components.day_view import DayView
 from tui_calendar.ui.components.month_grid import MonthGrid
 from tui_calendar.ui.components.week_view import WeekView
-from tui_calendar.ui.components.day_view import DayView
 
 
 class TuiCalApp(App):
@@ -15,21 +16,14 @@ class TuiCalApp(App):
 
     selected_date = reactive(date.today())
 
+    def on_mount(self) -> None:
+        """Инициализация индексатора при старте приложения."""
+        self.indexer = NotesIndexer("./notes")
+       
     TITLE = "TUI Calendar"
     MONTH_NAMES = [
-        "",
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
+        "", "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
     ]
 
     CSS = """
@@ -57,6 +51,7 @@ class TuiCalApp(App):
         Binding("w", "switch_view('week')", "Week"),
         Binding("d", "switch_view('day')", "Day"),
         Binding("t", "go_today", "Today"),
+        Binding("enter", "open_editor", "Open in Editor"), 
     ]
 
     def compose(self) -> ComposeResult:
@@ -70,19 +65,18 @@ class TuiCalApp(App):
         yield Footer()
 
     def action_switch_view(self, view_id: str) -> None:
-        """Переключает текущий вид в ContentSwitcher."""
+        """Переключает текущий вид."""
         self.query_one("#view-switcher", ContentSwitcher).current = view_id
         self.query_one(f"#{view_id}").focus()
 
     def watch_selected_date(self, old_val: date, new_val: date) -> None:
-        """Автоматически обновляет подзаголовок при смене даты."""
+        """Обновляет заголовок месяца."""
         month_name = self.MONTH_NAMES[new_val.month]
         self.sub_title = f"{month_name} {new_val.year}"
 
     def action_go_today(self) -> None:
-        """Возвращает календарь к сегодняшней дате в текущем активном виде."""
+        """Переход к сегодняшней дате."""
         self.selected_date = date.today()
-
         current_view = self.query_one("#view-switcher").current
 
         if current_view == "month":
@@ -90,6 +84,26 @@ class TuiCalApp(App):
             month_grid.current_year = self.selected_date.year
             month_grid.current_month = self.selected_date.month
             month_grid._update_focus()
+        elif current_view == "week":
+            self.query_one("#week").rebuild_week()
+        elif current_view == "day":
+            self.query_one("#day").rebuild_day()
+    
+    def action_open_editor(self) -> None:
+        """Открывает существующую заметку в редакторе по нажатию Enter."""
+        events = self.indexer.get_event_for_range(self.selected_date, self.selected_date)
+        
+        if not events:
+            return
+            
+        file_path = events[0].path
+
+        with self.suspend():
+            self.indexer.open_file_in_editor(file_path)
+
+        current_view = self.query_one("#view-switcher").current
+        if current_view == "month":
+            self.query_one("#month").rebuild_grid()
         elif current_view == "week":
             self.query_one("#week").rebuild_week()
         elif current_view == "day":
