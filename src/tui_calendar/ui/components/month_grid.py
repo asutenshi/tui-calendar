@@ -1,5 +1,6 @@
 import calendar
 from datetime import date, timedelta
+from textual.events import Resize
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -25,7 +26,7 @@ class DayCell(Static):
         self.events = events or []
         self.focused_idx = 0      
         self.note_offset = 0    
-        self.max_visible = 4
+        self.max_visible = 1
 
     def compose(self) -> ComposeResult:
         with Static(classes="inner-cell"):
@@ -43,7 +44,11 @@ class DayCell(Static):
         for widget in container.query(".event-pill"):
             widget.remove()
 
-        if self.day == 0 or not self.events:
+        if self.day == 0:
+            return
+
+        if not self.events:
+            self.query_one(".cell-counter").update("")
             return
 
         month_grid = self.app.query_one("#month")
@@ -52,10 +57,10 @@ class DayCell(Static):
         counter_label = self.query_one(".cell-counter")
         total = len(self.events)
         
-        if is_mode_active and total > self.max_visible:
+        if is_mode_active and total > 0:
             counter_label.update(f"[{self.focused_idx + 1}/{total}]")
         else:
-            counter_label.update("") 
+            counter_label.update("")
 
         visible = self.events[self.note_offset : self.note_offset + self.max_visible]
 
@@ -67,6 +72,17 @@ class DayCell(Static):
             pill = Static(event.title, classes=f"event-pill {status_class} {focus_class}")
             container.mount(pill)
 
+    def on_resize(self, event: Resize) -> None:
+        """Динамически пересчитываем количество влезающих заметок при изменении размера терминала."""
+        new_max = max(1, self.content_size.height - 1)
+        
+        if new_max != self.max_visible:
+            self.max_visible = new_max
+            
+            if self.note_offset > 0 and self.note_offset + self.max_visible > len(self.events):
+                self.note_offset = max(0, len(self.events) - self.max_visible)
+                
+            self.render_events()
 
     def move_focus(self, delta: int) -> None:
         if not self.events:
@@ -305,6 +321,7 @@ class MonthGrid(Static):
 
         self.mount(*self.day_cells) 
         self._update_focus()
+
     def watch_current_month(self, old_val: int, new_val: int) -> None:
         if old_val != new_val:
             self.rebuild_grid()
