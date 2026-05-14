@@ -360,14 +360,16 @@ class MonthGrid(Static):
     def action_move_up(self) -> None:
         if self.is_day_focus_mode:
             active = self.get_active_cell()
-            if active: active.move_focus(-1)
+            if active:
+                active.move_focus(-1)
         else:
             self._change_date(-7)
 
     def action_move_down(self) -> None:
         if self.is_day_focus_mode:
             active = self.get_active_cell()
-            if active: active.move_focus(1)
+            if active:
+                active.move_focus(1)
         else:
             self._change_date(7)
 
