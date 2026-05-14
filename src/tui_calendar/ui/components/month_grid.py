@@ -18,82 +18,89 @@ class DayHeader(Static):
 class DayCell(Static):
     """Ячейка дня с отрисовкой событий и поддержкой скролла."""
 
-    def __init__(self, day: int, events: list[Event] = None):
-        super().__init__()
-        self.day = day
+    def __init__(self, cell_date: date | None, events: list[Event] = None, **kwargs):
+        super().__init__(**kwargs) 
+        self.cell_date = cell_date
+        self.day = cell_date.day if cell_date else 0
         self.events = events or []
-        self.focused_idx = 0      # Индекс текущей выбранной заметки (внутри дня)
-        self.scroll_offset = 0    # Смещение для скролла списка заметок
-        self.max_visible = 3      # Сколько заметок влезает по высоте (настрой под себя)
+        self.focused_idx = 0      
+        self.note_offset = 0    
+        self.max_visible = 4
 
     def compose(self) -> ComposeResult:
-        with Static(classes="inner-cell") as container:
+        with Static(classes="inner-cell"):
             if self.day != 0:
-                yield Static(str(self.day), classes="day-number")
-        # Сами заметки отрендерим в on_mount
+                with Static(classes="cell-header"):
+                    yield Static("", classes="cell-counter") 
+                    yield Static(str(self.day), classes="day-number")
 
     def on_mount(self) -> None:
         self.render_events()
 
     def render_events(self) -> None:
-        """Динамически перерисовывает заметки (используется для скролла и фокуса)."""
         container = self.query_one(".inner-cell")
         
-        # 1. Удаляем старые плашки
-        for widget in container.query(".event-pill, .more-indicator"):
+        for widget in container.query(".event-pill"):
             widget.remove()
 
         if self.day == 0 or not self.events:
             return
 
-        # 2. Проверяем, активен ли режим фокуса внутри дня для этой ячейки
         month_grid = self.app.query_one("#month")
         is_mode_active = month_grid.is_day_focus_mode and self.has_class("-active")
 
-        # 3. Вырезаем только те заметки, которые помещаются на экран
-        visible = self.events[self.scroll_offset : self.scroll_offset + self.max_visible]
+        counter_label = self.query_one(".cell-counter")
+        total = len(self.events)
+        
+        if is_mode_active and total > self.max_visible:
+            counter_label.update(f"[{self.focused_idx + 1}/{total}]")
+        else:
+            counter_label.update("") 
+
+        visible = self.events[self.note_offset : self.note_offset + self.max_visible]
 
         for i, event in enumerate(visible):
-            actual_idx = self.scroll_offset + i
+            actual_idx = self.note_offset + i
             status_class = f"-{event.status}" if event.status else ""
-            
-            # Если заметка в фокусе — добавляем класс
             focus_class = "-focused" if (actual_idx == self.focused_idx and is_mode_active) else ""
 
             pill = Static(event.title, classes=f"event-pill {status_class} {focus_class}")
             container.mount(pill)
 
-        # 4. Рисуем индикатор оставшихся заметок (+ N more...)
-        remaining = len(self.events) - (self.scroll_offset + self.max_visible)
-        if remaining > 0:
-            container.mount(Static(f"+ {remaining} more...", classes="more-indicator"))
 
     def move_focus(self, delta: int) -> None:
-        """Смещает фокус внутри ячейки и обрабатывает прокрутку."""
         if not self.events:
             return
 
-        self.focused_idx += delta
-        # Не даем уйти за границы списка
-        self.focused_idx = max(0, min(self.focused_idx, len(self.events) - 1))
+        total = len(self.events)
+        
+        self.focused_idx = (self.focused_idx + delta) % total
 
-        # Логика скроллинга
-        if self.focused_idx < self.scroll_offset:
-            # Скроллим вверх
-            self.scroll_offset = self.focused_idx
-        elif self.focused_idx >= self.scroll_offset + self.max_visible:
-            # Скроллим вниз
-            self.scroll_offset = self.focused_idx - self.max_visible + 1
+        if self.focused_idx < self.note_offset:
+            self.note_offset = self.focused_idx
+        elif self.focused_idx >= self.note_offset + self.max_visible:
+            self.note_offset = self.focused_idx - self.max_visible + 1
+
+        try:
+            month_grid = self.app.query_one("#month")
+            month_grid.cell_states[self.cell_date] = {
+                "focused_idx": self.focused_idx,
+                "note_offset": self.note_offset
+            }
+        except Exception:
+            pass
 
         self.render_events()
+
 
 class MonthGrid(Static):
     """Сетка месяца."""
 
     can_focus = True
-
     current_year = reactive(date.today().year)
     current_month = reactive(date.today().month)
+    
+    is_day_focus_mode = reactive(False)
 
     BINDINGS = [
         Binding("h", "move_left", "Left", show=False),
@@ -139,19 +146,31 @@ class MonthGrid(Static):
     DayCell .inner-cell {
         width: 100%;
         height: 100%;
-        padding: 0;         
+        padding: 0;
         margin: 0;
         layout: vertical;
         overflow-y: hidden;
     }
     
-    .day-number {
+    .cell-header {
         width: 100%;
-        height: 1;            
+        height: 1;
+        layout: horizontal;
+    }
+
+    .cell-counter {
+        width: 1fr;
+        content-align: left top;
+        color: $accent;
+        padding-left: 1;
+        text-style: bold;
+    }
+
+    .day-number {
+        width: 1fr;
         content-align: right top;
         color: $text-muted;
         padding-right: 1; 
-        margin-bottom: 0;     
     }
 
     DayCell.-today .day-number {
@@ -159,11 +178,26 @@ class MonthGrid(Static):
         text-style: bold;
     }
 
+    DayCell.-active {
+        outline: none;
+    }
+    
+    DayCell.-active .inner-cell {
+        background: rgba(150, 150, 150, 0.2); 
+    }
+
+    MonthGrid.-editing-mode DayCell.-active .cell-counter,
+    MonthGrid.-editing-mode DayCell.-active .day-number {
+        color: $success; 
+        text-style: bold;
+    }
+
+
     .event-pill {
         width: 100%;
-        height: 1;            
-        margin: 0;            
-        padding: 0 1;         
+        height: 1;
+        margin: 0;
+        padding: 0 1; 
         content-align: left middle;
         overflow-x: hidden;
     }
@@ -187,24 +221,28 @@ class MonthGrid(Static):
         text-style: dim;
     }
 
-    .more-indicator {
-        color: $text-muted;
-        text-style: italic;
-        margin-left: 1; 
-    }
-
-    DayCell.-empty .inner-cell {
-        background: $background;
-    }
-
-    DayCell.-today .inner-cell {
-        color: $success;
+    /* СТИЛИ ФОКУСА ЗАМЕТОК */
+    .event-pill.-focused {
+        background: $primary; 
+        color: $background;
         text-style: bold;
     }
-    
-    DayCell.-active .inner-cell {
-        background: $boost;
-        color: $text;
+
+    .event-pill.-todo.-focused {
+        background: $warning;
+        color: $background;
+        text-style: bold;
+    }
+
+    .event-pill.-in_progress.-focused {
+        background: $accent;
+        color: $background;
+        text-style: bold;
+    }
+
+    .event-pill.-done.-focused {
+        background: $success;
+        color: $background;
         text-style: bold;
     }
     """
@@ -215,10 +253,19 @@ class MonthGrid(Static):
             yield DayHeader(day_name)
 
     def on_mount(self) -> None:
+        self.cell_states: dict[date, dict] = {} 
+        
         self.day_cells = [] 
         self.current_year = self.app.selected_date.year
         self.current_month = self.app.selected_date.month
         self.rebuild_grid()
+
+    def watch_is_day_focus_mode(self, old_val: bool, new_val: bool) -> None:
+        """Срабатывает автоматически при изменении флажка режима."""
+        if new_val:
+            self.add_class("-editing-mode")
+        else:
+            self.remove_class("-editing-mode")
 
     def rebuild_grid(self) -> None:
         self.query(DayCell).remove()
@@ -234,8 +281,19 @@ class MonthGrid(Static):
         for day in cal.itermonthdays(self.current_year, self.current_month):
             day_events = [e for e in all_month_events if e.date.day == day] if day != 0 else []
             
-            cell = DayCell(day=day, events=day_events)
+            cell_date = date(self.current_year, self.current_month, day) if day != 0 else None
             
+            cell = DayCell(cell_date=cell_date, events=day_events)
+            
+            if cell_date and cell_date in getattr(self, 'cell_states', {}):
+                state = self.cell_states[cell_date]
+                
+                max_idx = max(0, len(day_events) - 1)
+                cell.focused_idx = min(state["focused_idx"], max_idx)
+                
+                max_offset = max(0, len(day_events) - cell.max_visible)
+                cell.note_offset = min(state["note_offset"], max_offset)
+
             if day == 0:
                 cell.add_class("-empty")
             elif (day == today.day and 
@@ -246,8 +304,7 @@ class MonthGrid(Static):
             self.day_cells.append(cell)
 
         self.mount(*self.day_cells) 
-        self._update_focus() 
-
+        self._update_focus()
     def watch_current_month(self, old_val: int, new_val: int) -> None:
         if old_val != new_val:
             self.rebuild_grid()
@@ -282,17 +339,37 @@ class MonthGrid(Static):
         else:
             self._update_focus()
 
+
+
+    def get_active_cell(self) -> DayCell | None:
+        """Вспомогательный метод для получения текущей выделенной ячейки."""
+        selected = self.app.selected_date
+        for cell in self.day_cells:
+            if cell.day == selected.day:
+                return cell
+        return None
+
     def action_move_left(self) -> None:
-        self._change_date(-1)
+        if not self.is_day_focus_mode:
+            self._change_date(-1)
 
     def action_move_right(self) -> None:
-        self._change_date(1)
+        if not self.is_day_focus_mode:
+            self._change_date(1)
 
     def action_move_up(self) -> None:
-        self._change_date(-7)
+        if self.is_day_focus_mode:
+            active = self.get_active_cell()
+            if active: active.move_focus(-1)
+        else:
+            self._change_date(-7)
 
     def action_move_down(self) -> None:
-        self._change_date(7)
+        if self.is_day_focus_mode:
+            active = self.get_active_cell()
+            if active: active.move_focus(1)
+        else:
+            self._change_date(7)
 
     def action_prev_month(self) -> None:
         y, m = self.current_year, self.current_month
