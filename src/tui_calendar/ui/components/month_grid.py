@@ -16,28 +16,76 @@ class DayHeader(Static):
 
 
 class DayCell(Static):
-    """Ячейка дня с отрисовкой событий."""
+    """Ячейка дня с отрисовкой событий и поддержкой скролла."""
 
     def __init__(self, day: int, events: list[Event] = None):
         super().__init__()
         self.day = day
         self.events = events or []
+        self.focused_idx = 0      # Индекс текущей выбранной заметки (внутри дня)
+        self.scroll_offset = 0    # Смещение для скролла списка заметок
+        self.max_visible = 3      # Сколько заметок влезает по высоте (настрой под себя)
 
     def compose(self) -> ComposeResult:
-        with Static(classes="inner-cell", expand=True) as container:
+        with Static(classes="inner-cell") as container:
             if self.day != 0:
                 yield Static(str(self.day), classes="day-number")
-                
-                visible_events = self.events[:2]
-                for event in visible_events:
-                    status_class = f"-{event.status}" if event.status else ""
-                    yield Static(
-                        event.title, 
-                        classes=f"event-pill {status_class}"
-                    )
-                
-                if len(self.events) > 2:
-                    yield Static(f"+ {len(self.events) - 2} more...", classes="more-indicator")
+        # Сами заметки отрендерим в on_mount
+
+    def on_mount(self) -> None:
+        self.render_events()
+
+    def render_events(self) -> None:
+        """Динамически перерисовывает заметки (используется для скролла и фокуса)."""
+        container = self.query_one(".inner-cell")
+        
+        # 1. Удаляем старые плашки
+        for widget in container.query(".event-pill, .more-indicator"):
+            widget.remove()
+
+        if self.day == 0 or not self.events:
+            return
+
+        # 2. Проверяем, активен ли режим фокуса внутри дня для этой ячейки
+        month_grid = self.app.query_one("#month")
+        is_mode_active = month_grid.is_day_focus_mode and self.has_class("-active")
+
+        # 3. Вырезаем только те заметки, которые помещаются на экран
+        visible = self.events[self.scroll_offset : self.scroll_offset + self.max_visible]
+
+        for i, event in enumerate(visible):
+            actual_idx = self.scroll_offset + i
+            status_class = f"-{event.status}" if event.status else ""
+            
+            # Если заметка в фокусе — добавляем класс
+            focus_class = "-focused" if (actual_idx == self.focused_idx and is_mode_active) else ""
+
+            pill = Static(event.title, classes=f"event-pill {status_class} {focus_class}")
+            container.mount(pill)
+
+        # 4. Рисуем индикатор оставшихся заметок (+ N more...)
+        remaining = len(self.events) - (self.scroll_offset + self.max_visible)
+        if remaining > 0:
+            container.mount(Static(f"+ {remaining} more...", classes="more-indicator"))
+
+    def move_focus(self, delta: int) -> None:
+        """Смещает фокус внутри ячейки и обрабатывает прокрутку."""
+        if not self.events:
+            return
+
+        self.focused_idx += delta
+        # Не даем уйти за границы списка
+        self.focused_idx = max(0, min(self.focused_idx, len(self.events) - 1))
+
+        # Логика скроллинга
+        if self.focused_idx < self.scroll_offset:
+            # Скроллим вверх
+            self.scroll_offset = self.focused_idx
+        elif self.focused_idx >= self.scroll_offset + self.max_visible:
+            # Скроллим вниз
+            self.scroll_offset = self.focused_idx - self.max_visible + 1
+
+        self.render_events()
 
 class MonthGrid(Static):
     """Сетка месяца."""
@@ -91,17 +139,19 @@ class MonthGrid(Static):
     DayCell .inner-cell {
         width: 100%;
         height: 100%;
-        padding: 0;
+        padding: 0;         
+        margin: 0;
         layout: vertical;
         overflow-y: hidden;
     }
     
     .day-number {
         width: 100%;
+        height: 1;            
         content-align: right top;
         color: $text-muted;
         padding-right: 1; 
-        margin-bottom: 1; 
+        margin-bottom: 0;     
     }
 
     DayCell.-today .day-number {
@@ -111,9 +161,9 @@ class MonthGrid(Static):
 
     .event-pill {
         width: 100%;
-        height: 1;
-        margin-bottom: 1; 
-        padding: 0 1; 
+        height: 1;            
+        margin: 0;            
+        padding: 0 1;         
         content-align: left middle;
         overflow-x: hidden;
     }
