@@ -8,7 +8,7 @@ from textual.reactive import reactive
 from textual.widgets import Static
 
 from tui_calendar.core.model import Event
-
+from tui_calendar.ui.screens.confirm_delete import ConfirmDeleteScreen
 
 class DayHeader(Static):
     """Заголовок дня недели."""
@@ -126,6 +126,7 @@ class MonthGrid(Static):
         Binding("ctrl+h", "prev_month", "Prev Month", show=False),
         Binding("backspace", "prev_month", "Prev Month", show=True),
         Binding("ctrl+l", "next_month", "Next Month", show=True),
+        Binding("d", "delete_note", "Delete Note", show=False),
     ]
 
     DEFAULT_CSS = """
@@ -233,8 +234,8 @@ class MonthGrid(Static):
     .event-pill.-done {
         border-left: solid $success;
         background: $success 15%;
-        color: $text-muted;
-        text-style: dim;
+        color: $text;
+
     }
 
     /* СТИЛИ ФОКУСА ЗАМЕТОК */
@@ -416,3 +417,25 @@ class MonthGrid(Static):
         self.current_month = self.app.selected_date.month
         self._update_focus()
         self.focus()
+    
+    def action_delete_note(self) -> None:
+        """Обрабатывает нажатие 'd' для удаления сфокусированной заметки."""
+        if not getattr(self, "is_day_focus_mode", False):
+            return
+
+        active_cell = self.get_active_cell()
+        if not active_cell or not active_cell.events:
+            return
+
+        event_to_delete = active_cell.events[active_cell.focused_idx]
+
+        def check_deletion(confirmed: bool) -> None:
+            if confirmed:
+                try:
+                    event_to_delete.path.unlink()
+                except FileNotFoundError:
+                    pass
+                
+                self.rebuild_grid()
+
+        self.app.push_screen(ConfirmDeleteScreen(event_to_delete.title), check_deletion)

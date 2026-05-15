@@ -1,4 +1,5 @@
 from datetime import date
+from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -63,8 +64,9 @@ class TuiCalApp(App):
     ]
 
     def __init__(self):
-        super().__init__()
-        self.indexer = NotesIndexer("./notes") 
+        super().__init__() 
+        notes_dir = Path("notes") 
+        self.indexer = NotesIndexer(notes_dir) 
 
     selected_date = reactive(date.today())
 
