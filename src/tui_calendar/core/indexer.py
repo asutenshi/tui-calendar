@@ -74,3 +74,21 @@ class NotesIndexer:
             frontmatter.dump(post, f)
 
         return file_path
+    
+    def delete_note(self, file_path: Path) -> bool:
+        """Удаляет файл заметки. Возвращает True при успехе, False если файла нет."""
+        if not file_path.is_file():
+          return False
+        
+        try:
+            file_path.unlink()
+            return True
+        except Exception as e:
+            # На случай, если нет прав доступа
+            print(f"Ошибка при удалении {file_path}: {e}")
+            return False
+        
+
+
+
+
