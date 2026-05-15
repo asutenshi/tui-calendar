@@ -39,22 +39,20 @@ class NotesIndexer:
     def update_note(self, event: Event):
         if not event.path.exists():
             return False
-        
+
         try:
             post = frontmatter.load(event.path)
             post.metadata["date"] = event.date
             post.metadata["title"] = event.title
             post.metadata["status"] = event.status
             post.metadata["tags"] = event.tags
-            
+
             with open(event.path, "wb") as file:
                 frontmatter.dump(post, file)
             return True
         except Exception as e:
-            print(f"Не удалось прочитать файл {event.path.name}: {e}")        
+            print(f"Не удалось прочитать файл {event.path.name}: {e}")
             return False
-
-            
 
     def get_events(self) -> list[Event]:
         events = []
