@@ -1,14 +1,15 @@
 import calendar
 from datetime import date, timedelta
-from textual.events import Resize
 
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.events import Resize
 from textual.reactive import reactive
 from textual.widgets import Static
 
 from tui_calendar.core.model import Event
 from tui_calendar.ui.screens.confirm_delete import ConfirmDeleteScreen
+
 
 class DayHeader(Static):
     """Заголовок дня недели."""
@@ -46,7 +47,7 @@ class DayCell(Static):
 
         if self.day == 0:
             return
-
+        
         if not self.events:
             self.query_one(".cell-counter").update("")
             return
@@ -59,6 +60,9 @@ class DayCell(Static):
         
         if is_mode_active and total > 0:
             counter_label.update(f"[{self.focused_idx + 1}/{total}]")
+        elif total>0:
+            counter_label.update(f"[0/{total}]")  
+
         else:
             counter_label.update("")
 
@@ -73,7 +77,7 @@ class DayCell(Static):
             container.mount(pill)
 
     def on_resize(self, event: Resize) -> None:
-        """Динамически пересчитываем количество влезающих заметок при изменении размера терминала."""
+        """Пересчитываем количество видимых заметок при ресайзе терминала."""
         new_max = max(1, self.content_size.height - 1)
         
         if new_max != self.max_visible:
@@ -178,7 +182,7 @@ class MonthGrid(Static):
     .cell-counter {
         width: 1fr;
         content-align: left top;
-        color: $accent;
+        color: $text-muted;
         padding-left: 1;
         text-style: bold;
     }
