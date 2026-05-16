@@ -7,6 +7,7 @@ from textual.widgets import Static
 
 class DayColumn(Static):
     """Колонка одного дня в неделе."""
+
     def __init__(self, day_date: date):
         super().__init__()
         self.date = day_date
@@ -61,7 +62,7 @@ class WeekView(Static):
     """
 
     def on_mount(self) -> None:
-        self._rendered_monday = None  
+        self._rendered_monday = None
         self.rebuild_week()
 
     def _get_monday(self, d: date) -> date:
@@ -70,14 +71,14 @@ class WeekView(Static):
     def rebuild_week(self) -> None:
         selected = self.app.selected_date
         target_monday = self._get_monday(selected)
-        
+
         if self._rendered_monday == target_monday:
             self._update_focus()
             return
-            
+
         self.query(DayColumn).remove()
         self._rendered_monday = target_monday
-        
+
         columns = []
         for i in range(7):
             current_date = target_monday + timedelta(days=i)
@@ -85,7 +86,7 @@ class WeekView(Static):
             if current_date == selected:
                 col.add_class("-active")
             columns.append(col)
-            
+
         self.mount(*columns)
 
     def _update_focus(self) -> None:
@@ -98,7 +99,7 @@ class WeekView(Static):
 
     def _change_date(self, delta_days: int) -> None:
         self.app.selected_date += timedelta(days=delta_days)
-    
+
         self.rebuild_week()
 
     def action_move_left(self) -> None:

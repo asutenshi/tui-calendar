@@ -8,7 +8,7 @@ from textual.reactive import reactive
 from textual.widgets import Static
 
 from tui_calendar.core.model import Event
-from tui_calendar.ui.screens.confirm_delete import ConfirmDeleteScreen
+from tui_calendar.ui.screens.dialogs import DeleteConfirmDialog
 
 
 class DayHeader(Static):
@@ -21,19 +21,19 @@ class DayCell(Static):
     """Ячейка дня с отрисовкой событий и поддержкой скролла."""
 
     def __init__(self, cell_date: date | None, events: list[Event] = None, **kwargs):
-        super().__init__(**kwargs) 
+        super().__init__(**kwargs)
         self.cell_date = cell_date
         self.day = cell_date.day if cell_date else 0
         self.events = events or []
-        self.focused_idx = 0      
-        self.note_offset = 0    
+        self.focused_idx = 0
+        self.note_offset = 0
         self.max_visible = 1
 
     def compose(self) -> ComposeResult:
         with Static(classes="inner-cell"):
             if self.day != 0:
                 with Static(classes="cell-header"):
-                    yield Static("", classes="cell-counter") 
+                    yield Static("", classes="cell-counter")
                     yield Static(str(self.day), classes="day-number")
 
     def on_mount(self) -> None:
@@ -41,13 +41,13 @@ class DayCell(Static):
 
     def render_events(self) -> None:
         container = self.query_one(".inner-cell")
-        
+
         for widget in container.query(".event-pill"):
             widget.remove()
 
         if self.day == 0:
             return
-        
+
         if not self.events:
             self.query_one(".cell-counter").update("")
             return
@@ -57,11 +57,11 @@ class DayCell(Static):
 
         counter_label = self.query_one(".cell-counter")
         total = len(self.events)
-        
+
         if is_mode_active and total > 0:
             counter_label.update(f"[{self.focused_idx + 1}/{total}]")
-        elif total>0:
-            counter_label.update(f"[0/{total}]")  
+        elif total > 0:
+            counter_label.update(f"[0/{total}]")
 
         else:
             counter_label.update("")
@@ -79,13 +79,13 @@ class DayCell(Static):
     def on_resize(self, event: Resize) -> None:
         """Пересчитываем количество видимых заметок при ресайзе терминала."""
         new_max = max(1, self.content_size.height - 1)
-        
+
         if new_max != self.max_visible:
             self.max_visible = new_max
-            
+
             if self.note_offset > 0 and self.note_offset + self.max_visible > len(self.events):
                 self.note_offset = max(0, len(self.events) - self.max_visible)
-                
+
             self.render_events()
 
     def move_focus(self, delta: int) -> None:
@@ -93,7 +93,7 @@ class DayCell(Static):
             return
 
         total = len(self.events)
-        
+
         self.focused_idx = (self.focused_idx + delta) % total
 
         if self.focused_idx < self.note_offset:
@@ -105,7 +105,7 @@ class DayCell(Static):
             month_grid = self.app.query_one("#month")
             month_grid.cell_states[self.cell_date] = {
                 "focused_idx": self.focused_idx,
-                "note_offset": self.note_offset
+                "note_offset": self.note_offset,
             }
         except Exception:
             pass
@@ -119,18 +119,24 @@ class MonthGrid(Static):
     can_focus = True
     current_year = reactive(date.today().year)
     current_month = reactive(date.today().month)
-    
+
     is_day_focus_mode = reactive(False)
 
     BINDINGS = [
+        # Навигация по сетке
         Binding("h", "move_left", "Left", show=False),
         Binding("j", "move_down", "Down", show=False),
         Binding("k", "move_up", "Up", show=False),
         Binding("l", "move_right", "Right", show=False),
+        # Взаимодействие с ячейкой
+        Binding("enter", "open_editor", "Enter Day", show=False),
+        Binding("escape", "exit_focus", "Exit Day", show=False),
+        # Удаление
+        Binding("d", "delete_note", "Delete Note", show=False),
+        # Переключение месяцев
         Binding("ctrl+h", "prev_month", "Prev Month", show=False),
         Binding("backspace", "prev_month", "Prev Month", show=True),
         Binding("ctrl+l", "next_month", "Next Month", show=True),
-        Binding("d", "delete_note", "Delete Note", show=False),
     ]
 
     DEFAULT_CSS = """
@@ -274,9 +280,9 @@ class MonthGrid(Static):
             yield DayHeader(day_name)
 
     def on_mount(self) -> None:
-        self.cell_states: dict[date, dict] = {} 
-        
-        self.day_cells = [] 
+        self.cell_states: dict[date, dict] = {}
+
+        self.day_cells = []
         self.current_year = self.app.selected_date.year
         self.current_month = self.app.selected_date.month
         self.rebuild_grid()
@@ -290,41 +296,43 @@ class MonthGrid(Static):
 
     def rebuild_grid(self) -> None:
         self.query(DayCell).remove()
-        self.day_cells = [] 
+        self.day_cells = []
 
         start_date = date(self.current_year, self.current_month, 1)
-        end_date = start_date + timedelta(days=32) 
+        end_date = start_date + timedelta(days=32)
         all_month_events = self.app.indexer.get_event_for_range(start_date, end_date)
 
         today = date.today()
         cal = calendar.Calendar(firstweekday=0)
-        
+
         for day in cal.itermonthdays(self.current_year, self.current_month):
             day_events = [e for e in all_month_events if e.date.day == day] if day != 0 else []
-            
+
             cell_date = date(self.current_year, self.current_month, day) if day != 0 else None
-            
+
             cell = DayCell(cell_date=cell_date, events=day_events)
-            
-            if cell_date and cell_date in getattr(self, 'cell_states', {}):
+
+            if cell_date and cell_date in getattr(self, "cell_states", {}):
                 state = self.cell_states[cell_date]
-                
+
                 max_idx = max(0, len(day_events) - 1)
                 cell.focused_idx = min(state["focused_idx"], max_idx)
-                
+
                 max_offset = max(0, len(day_events) - cell.max_visible)
                 cell.note_offset = min(state["note_offset"], max_offset)
 
             if day == 0:
                 cell.add_class("-empty")
-            elif (day == today.day and 
-                  self.current_month == today.month and 
-                  self.current_year == today.year):
+            elif (
+                day == today.day
+                and self.current_month == today.month
+                and self.current_year == today.year
+            ):
                 cell.add_class("-today")
-                
+
             self.day_cells.append(cell)
 
-        self.mount(*self.day_cells) 
+        self.mount(*self.day_cells)
         self._update_focus()
 
     def watch_current_month(self, old_val: int, new_val: int) -> None:
@@ -360,8 +368,6 @@ class MonthGrid(Static):
             self.current_month = new_date.month
         else:
             self._update_focus()
-
-
 
     def get_active_cell(self) -> DayCell | None:
         """Вспомогательный метод для получения текущей выделенной ячейки."""
@@ -421,7 +427,7 @@ class MonthGrid(Static):
         self.current_month = self.app.selected_date.month
         self._update_focus()
         self.focus()
-    
+
     def action_delete_note(self) -> None:
         """Обрабатывает нажатие 'd' для удаления сфокусированной заметки."""
         if not getattr(self, "is_day_focus_mode", False):
@@ -439,7 +445,7 @@ class MonthGrid(Static):
                     event_to_delete.path.unlink()
                 except FileNotFoundError:
                     pass
-                
+
                 self.rebuild_grid()
 
-        self.app.push_screen(ConfirmDeleteScreen(event_to_delete.title), check_deletion)
+        self.app.push_screen(DeleteConfirmDialog(event_to_delete.title), check_deletion)
