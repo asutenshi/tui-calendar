@@ -12,6 +12,35 @@ def indexer(tmp_path):
     return NotesIndexer(tmp_path)
 
 
+def test_get_note(indexer):
+    target_date = date(2026, 11, 7)
+    title = "Test Note"
+
+    path = indexer.create_note(target_date, title)
+    note = indexer.get_note(path)
+    assert note is not None
+    assert note.title == title
+    assert note.date == target_date
+    assert note.path == path
+
+
+def test_update_note(indexer):
+    target_date = date(2026, 11, 7)
+    title = "Test Note"
+
+    path = indexer.create_note(target_date, title)
+    note = indexer.get_note(path)
+
+    note.title = "Test get note"
+    note.status = "done"
+
+    is_update = indexer.update_note(note)
+    assert is_update is True
+    post = frontmatter.load(path)
+    assert post.metadata["title"] == "Test get note"
+    assert post.metadata["status"] == "done"
+
+
 def test_create_note_file_exists(indexer):
     """Проверка, что файл физически создается."""
     target_date = date(2026, 11, 7)
