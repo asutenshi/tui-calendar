@@ -4,8 +4,8 @@ from pathlib import Path
 import frontmatter
 from pydantic import ValidationError
 
-from .model import Event
 from .config import ConfigManager
+from .model import Event
 
 
 class NotesIndexer:
