@@ -1,98 +1,81 @@
-!!! Информация в "{}" является временной. Возможно это не будет реализовано.
+# MVP: TUI Calendar-Task Manager (Vim-style, Markdown-backed & Sync)
 
-# MVP: TUI Календарь-задачник (Vim-style, Markdown-backed & Sync)
+## 1. Introduction
+An aesthetic and fast terminal application (TUI) built with Python. It is a hybrid between a calendar and a note manager, where data is stored in local Markdown files with YAML frontmatter. The system is fully compatible with Obsidian/Logseq.
 
-## 1. Введение
-Эстетичное и быстрое терминальное приложение (TUI) на Python. Это гибрид календаря и менеджера заметок, где данные хранятся в локальных Markdown-файлах с YAML frontmatter. {Система полностью совместима с Obsidian/Logseq и поддерживает серверную синхронизацию для общих календарей (например, расписания вуза).}
+## 2. Problem and Solution
+**Problem:** Existing calendars are either closed ecosystems (Google/Apple) or too primitive. It is difficult to combine personal Markdown notes with external schedules (iCal) within a single Vim-friendly interface.
+**Solution:** A TUI aggregator that indexes local folders and cloud subscriptions, displaying everything on a single grid. Navigation and control are strictly keyboard-driven (Vim-style).
 
-## 2. Проблема и решение
-**Проблема:** Существующие календари либо закрыты (Google/Apple), либо слишком примитивны. Сложно совмещать личные заметки в Markdown с внешними расписаниями (iCal) в едином Vim-friendly интерфейсе.
-**Решение:** TUI-агрегатор, который индексирует локальные папки и облачные подписки, отображая всё на единой сетке. Управление — строго клавиатурное (Vim-style).
+## 3. MVP Goals
+* Create a seamless TUI interface (Month/Week/Day views).
+* Implement parsing of local `.md` files based on the `date` YAML property.
+* Ensure quick invocation of the system `$EDITOR` (Vim/Neovim/Nano).
 
-## 3. Цели MVP
-* Создать бесшовный TUI-интерфейс (Месяц/Неделя/День).
-* Реализовать парсинг локальных `.md` файлов по YAML-свойству `date`.
-{* Внедрить серверный модуль для синхронизации и импорта iCal-расписаний.}
-* Обеспечить быстрый вызов системного `$EDITOR` (Vim/Neovim/Nano).
+## 4. Mandatory Functions (Scope)
 
-## 4. Обязательные функции (Scope)
+**4.1. Interface (TUI):**
+* **Views:** Month (grid), Week (columns).
+* **Navigation:** `h`, `j`, `k`, `l` for movement; `m`, `w`, for switching views; `Enter` to browse throw notes in day.
+* **Input:** `n` — create a new note with auto-filled YAML date. `d` — delete focused note. `shift+h/l` — change note date. `Enter` — open file in `$EDITOR`.
 
-**4.1. Интерфейс (TUI):**
-* **Виды:** Месяц (сетка), Неделя (колонки), День (список дел).
-* **Навигация:** `h`, `j`, `k`, `l` для перемещения; `m`, `w`, `d` для смены видов.
-* **Ввод:** `c` / `n` — создание новой заметки с автозаполнением YAML-даты. `Enter` — открытие файла в `$EDITOR`.
+**4.2. Core Logic:**
+* **Indexing:** Scanning the directory and building an event map in RAM.
+* **Markdown Engine:** Reading/writing YAML frontmatter (date, tags, status).
+* **Watcher:** Automatic interface refresh when files are modified externally.
 
-**4.2. Ядро и данные (Core Logic):**
-* **Индексация:** Сканирование директории и построение карты событий в RAM.
-* **Markdown Engine:** Чтение/запись YAML frontmatter (дата, теги, статус).
-* **Watcher:** Автоматическое обновление интерфейса при изменении файлов извне.
-* iCal: Поддержка обработки iCal ссылок и пребразования их в файловые заметки.
+## 5. Team Roles
 
-{**4.3. Сервер и Синхронизация (Backend):**
-* **Sync API:** Прием и отдача `.md` файлов для синхронизации между устройствами.
-* **iCal Gateway:** Серверный парсер внешних `.ics` ссылок (расписание вуза) с конвертацией в Markdown "на лету".
-* **Subscriptions:** Возможность подписаться на "общий" календарь по URL.}
+### Role 1: UI/UX Developer (Frontend TUI)
+* **Stack:** Python, Textual.
+* **Tasks:** Rendering the interface, handling hotkeys, animations, integration with the terminal and editor.
 
-## 5. Распределение ролей в команде
+### Role 2: Core Developer (Engine & Logic)
+* **Stack:** Python, python-frontmatter, PyYAML, Pydantic.
+* **Tasks:** File indexer, metadata search, event filtering logic, local storage and caching, iCal subscription processing.
 
-### Роль 1: UI/UX Developer (Frontend TUI)
-* **Стек:** Python, Textual.
-* **Задачи:** Отрисовка интерфейса, обработка хоткеев, анимации, интеграция с терминалом и редактором.
+### Role 3: Tech Lead / Product Owner
+* **Stack**: GitHub (Projects/Issues), Project Architecture, Markdown.
+* **Tasks**: System architecture design (Data Specs), task decomposition and prioritization, code review (QA), milestone management, and high-level technical guidance.
 
-### Роль 2: Core Developer (Engine & Logic)
-* **Стек:** Python, python-frontmatter, PyYAML, Pydantic.
-* **Задачи:** Индексатор файлов, поиск по метаданным, логика фильтрации событий, локальное хранение и кэширование, обработка iCal подписки.
-
-{### Роль 3: Backend/DevOps Engineer (Server & Infra)
-* **Стек:** FastAPI/Go, PostgreSQL/Redis, Docker.
-* **Задачи:** API для синхронизации, парсер iCal -> Markdown, управление подписками, Docker-упаковка всего стека и CI/CD.}
-
-## 6. Технологический стек
-* **Язык:** Python 3.10+ (основной), {Go (опционально для бэкенда).}
+## 6. Tech Stack
+* **Language:** Python 3.10+ (core).
 * **UI:** Textual (TUI framework).
-{* **Бэкенд:** FastAPI.}
-* **Инфраструктура:** Docker, Docker Compose (для self-hosting).
-* **Формат данных:** Markdown (.md) + YAML.
+* **Data Format:** Markdown (.md) + YAML.
 
-## 7. Критерии готовности (Definition of Done)
-1. Приложение корректно отображает локальные заметки на сетке календаря.
-2. Работает создание файлов через `c` и их открытие в `$EDITOR`.
-3. Работает обработка iCal-ссылок.
-{3. Сервер успешно скачивает iCal-ссылку и отдает её клиенту в формате `.md`.}
-{4. Реализована команда `:sync`, синхронизирующая локальную папку с сервером.}
-{5. Весь проект (Client + Server) запускается через Docker Compose или единую инструкцию.}
-4. Клиентское приложение можно установить из pip или другого пакетного менеджера.
+## 7. Definition of Done
+1. The application correctly displays local notes on the calendar grid.
+2. File creation via `c` and opening in `$EDITOR` works correctly.
+3. The client application can be installed via pip or another package manager.
 
-## 8. Спецификация хоткеев (Keymap)
-* `h`, `j`, `k`, `l` — Навигация (влево, вниз, вверх, вправо).
-* `m`, `w`, `d` — Переключение: Месяц / Неделя / День.
-* `t` — Перейти к сегодняшнему дню (Today).
-* `c` / `n` — Создать (Create/New) заметку на выбранную дату.
-* `Enter` — Фокус на дне или открытие файла в редакторе.
-{* `r` — Принудительное обновление индекса (Refresh).}
-{* `s` — Запуск синхронизации с сервером (Sync).}
-* `q` — Выход из приложения.
+## 8. Keymap Specification
+* `h`, `j`, `k`, `l` — Navigation (Left, Down, Up, Right).
+* `m`, `w`, — Switch views: Month / Week.
+* `t` — Go to Today.
+* `n` — New note for the selected date.
+* `d` — Delete focused note.
+* `Enter` — Focus on a day or open a file in the editor.
+* `q` — Quit application.
+* `shift+h/l` — Change note date.
 
-## 9. План релиза
+## 9. Release Plan
 
-*   **Этап 0: Contracts & Specs.** 
-    *   Согласование схемы YAML (какие поля обязательны).
-    *   Создание набора `dummy_notes/` (тестовых файлов) для разработки.
-    *   Определение интерфейса обмена данными между `core` и `ui`.
+*   **Stage 0: Contracts & Specs.** 
+    *   Agreement on the YAML schema (required fields).
+    *   Creation of a `dummy_notes/` set (test files) for development.
+    *   Defining the data exchange interface between `core` and `ui`.
 
-*   **Этап 1: Read-only MVP.** 
-    *   Core: Индексация папки, парсинг YAML, валидация данных.
-    *   UI: Отображение сетки (Месяц/Неделя) и списка событий.
+*   **Stage 1: Read-only MVP.** 
+    *   Core: Folder indexing, YAML parsing, data validation.
+    *   UI: Rendering the grid (Month/Week) and event list.
 
-*   **Этап 2: Interactive MVP.** 
-    *   Интеграция с `$EDITOR`.
-    *   Логика создания новых файлов (`c` / `n`) и горячие клавиши навигации.
+*   **Stage 2: Interactive MVP.** 
+    *   Integration with `$EDITOR`.
+    *   Logic for creating new files (`c` / `n`) and navigation hotkeys.
 
-*   **Этап 3: Integration & External Data.** 
-    *   Поддержка iCal-ссылок (локальный или серверный парсинг).
-    *   {Бэкенд: API для синхронизации .md файлов между устройствами}.
+*   **Stage 3: Integration & External Data.** 
+    *   Support for iCal links (local or server-side parsing).
 
-*   **Этап 4: Polishing & Distribution.** 
-    *   {Docker-упаковка связки клиент + сервер}.
-    *   Финальное тестирование, исправление багов TUI (артефакты отрисовки).
-    *   Документация (README) и публикация пакета (pip/PyPI).
+*   **Stage 4: Polishing & Distribution.** 
+    *   Final testing, fixing TUI bugs (rendering artifacts).
+    *   Documentation (README) and package publication (pip/PyPI).
