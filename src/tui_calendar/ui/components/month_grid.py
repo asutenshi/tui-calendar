@@ -436,7 +436,7 @@ class MonthGrid(Static):
     def action_delete_note(self) -> None:
         """Handles 'd' key press to delete the focused note."""
         active_cell = self.get_active_cell()
-        
+
         if not self.is_day_focus_mode or not active_cell or not active_cell.events:
             return
 
@@ -445,12 +445,136 @@ class MonthGrid(Static):
         def check_deletion(result: bool) -> None:
             if result:
                 self.app.indexer.delete_note(event_to_delete.path)
-                
+
                 self.rebuild_grid()
-                
+
                 if not self.get_active_cell().events:
                     self.is_day_focus_mode = False
-                    
+
                 self.app.notify(f"Note '{event_to_delete.title}' deleted successfully")
 
         self.app.push_screen(DeleteConfirmDialog(event_to_delete.title), check_deletion)
+
+    def action_move_note(self, direction: str) -> None:
+        """Перемещает заметку на другой день с помощью Shift+hjkl."""
+        if not getattr(self, "is_day_focus_mode", False):
+            return
+
+        active_cell = self.get_active_cell()
+        if not active_cell or not active_cell.events:
+            return
+
+        current_idx = active_cell.focused_idx
+        event_to_move = active_cell.events[current_idx]
+        current_date = event_to_move.date
+
+        if direction == "left":
+            delta = timedelta(days=-1)
+        elif direction == "right":
+            delta = timedelta(days=1)
+        elif direction == "up":
+            delta = timedelta(days=-7)
+        elif direction == "down":
+            delta = timedelta(days=7)
+        else:
+            return
+
+        new_date = current_date + delta
+
+        try:
+            event_to_move.date = new_date
+            self.app.indexer.update_note(event_to_move)
+
+            old_path = event_to_move.path
+            old_date_str = str(current_date)
+            new_date_str = str(new_date)
+
+            if old_path.name.startswith(old_date_str):
+                new_name = old_path.name.replace(old_date_str, new_date_str, 1)
+                new_path = old_path.with_name(new_name)
+
+                counter = 1
+                base_new_path = new_path
+                while new_path.exists():
+                    new_path = base_new_path.with_stem(f"{base_new_path.stem}_{counter}")
+                    counter += 1
+
+                old_path.rename(new_path)
+
+                event_to_move.path = new_path
+
+        except Exception as e:
+            self.app.notify(f"Error moving note: {e}", severity="error")
+            return
+
+        if new_date.year != self.current_year or new_date.month != self.current_month:
+            self.app.selected_date = new_date
+            self.current_year = new_date.year
+            self.current_month = new_date.month
+
+            self.set_timer(0.1, lambda: self._restore_note_focus(event_to_move.title))
+            return
+
+        dest_cell = None
+        for cell in self.day_cells:
+            if cell.cell_date == new_date:
+                dest_cell = cell
+                break
+
+        if dest_cell:
+            active_cell.events.pop(current_idx)
+
+            if active_cell.events:
+                active_cell.focused_idx = max(0, len(active_cell.events) - 1)
+                active_cell.note_offset = max(
+                    0, active_cell.focused_idx - active_cell.max_visible + 1
+                )
+            else:
+                active_cell.focused_idx = 0
+                active_cell.note_offset = 0
+
+            self.cell_states[active_cell.cell_date] = {
+                "focused_idx": active_cell.focused_idx,
+                "note_offset": active_cell.note_offset,
+            }
+
+            try:
+                active_cell.render_events()
+            except Exception:
+                pass
+
+            dest_cell.events.append(event_to_move)
+
+            self.app.selected_date = new_date
+            self._update_focus()
+
+            self.is_day_focus_mode = True
+            self.app.call_later(self._restore_note_focus, event_to_move.title)
+
+    def _restore_note_focus(self, target_title: str) -> None:
+        """Ищет перенесенную заметку в новой ячейке и выделяет её."""
+        active_cell = self.get_active_cell()
+        if not active_cell or not active_cell.events:
+            return
+
+        for idx, event in enumerate(active_cell.events):
+            if event.title == target_title:
+                active_cell.focused_idx = idx
+
+                if idx >= active_cell.max_visible:
+                    active_cell.note_offset = idx - active_cell.max_visible + 1
+                else:
+                    active_cell.note_offset = 0
+
+                self.cell_states[active_cell.cell_date] = {
+                    "focused_idx": active_cell.focused_idx,
+                    "note_offset": active_cell.note_offset,
+                }
+
+                self.is_day_focus_mode = True
+
+                try:
+                    active_cell.render_events()
+                except Exception:
+                    pass
+                break
