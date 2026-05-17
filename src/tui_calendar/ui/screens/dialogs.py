@@ -56,7 +56,7 @@ class DeleteConfirmDialog(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         with Grid(id="dialog-box"):
             yield Label(
-                f"Вы уверены, что хотите\nудалить «{self.note_title}»?", id="dialog-message"
+                f"Are you sure you want to\ndelete '{self.note_title}'?", id="dialog-message"
             )
             with Horizontal(id="dialog-buttons"):
                 yield Button("No", variant="primary", id="btn_no")

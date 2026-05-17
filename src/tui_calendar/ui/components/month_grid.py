@@ -429,23 +429,24 @@ class MonthGrid(Static):
         self.focus()
 
     def action_delete_note(self) -> None:
-        """Обрабатывает нажатие 'd' для удаления сфокусированной заметки."""
-        if not getattr(self, "is_day_focus_mode", False):
-            return
-
+        """Handles 'd' key press to delete the focused note."""
         active_cell = self.get_active_cell()
-        if not active_cell or not active_cell.events:
+        
+        if not self.is_day_focus_mode or not active_cell or not active_cell.events:
             return
 
         event_to_delete = active_cell.events[active_cell.focused_idx]
 
-        def check_deletion(confirmed: bool) -> None:
-            if confirmed:
-                try:
-                    event_to_delete.path.unlink()
-                except FileNotFoundError:
-                    pass
-
+        def check_deletion(result: bool) -> None:
+            if result:
+                self.app.indexer.delete_note(event_to_delete.path)
+                
                 self.rebuild_grid()
+                
+                if not self.get_active_cell().events:
+                    self.is_day_focus_mode = False
+                    
+                self.app.notify(f"Note '{event_to_delete.title}' deleted successfully")
 
+        from tui_calendar.ui.screens.dialogs import DeleteConfirmDialog
         self.app.push_screen(DeleteConfirmDialog(event_to_delete.title), check_deletion)
