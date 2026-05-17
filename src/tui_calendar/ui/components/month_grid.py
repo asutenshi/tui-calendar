@@ -434,88 +434,23 @@ class MonthGrid(Static):
         self.focus()
 
     def action_delete_note(self) -> None:
-        """Обрабатывает нажатие 'd' для удаления сфокусированной заметки."""
-        if not getattr(self, "is_day_focus_mode", False):
-            return
-
+        """Handles 'd' key press to delete the focused note."""
         active_cell = self.get_active_cell()
-        if not active_cell or not active_cell.events:
+        
+        if not self.is_day_focus_mode or not active_cell or not active_cell.events:
             return
 
         event_to_delete = active_cell.events[active_cell.focused_idx]
 
-        def check_deletion(confirmed: bool) -> None:
-            if confirmed:
-                try:
-                    event_to_delete.path.unlink()
-                except FileNotFoundError:
-                    pass
-
+        def check_deletion(result: bool) -> None:
+            if result:
+                self.app.indexer.delete_note(event_to_delete.path)
+                
                 self.rebuild_grid()
+                
+                if not self.get_active_cell().events:
+                    self.is_day_focus_mode = False
+                    
+                self.app.notify(f"Note '{event_to_delete.title}' deleted successfully")
 
         self.app.push_screen(DeleteConfirmDialog(event_to_delete.title), check_deletion)
-
-    def action_move_note(self, direction: str) -> None:
-        """Перемещает заметку на другой день с помощью Shift+hjkl."""
-        if not getattr(self, "is_day_focus_mode", False):
-            return
-
-        active_cell = self.get_active_cell()
-        if not active_cell or not active_cell.events:
-            return
-
-        event_to_move = active_cell.events[active_cell.focused_idx]
-        current_date = event_to_move.date
-
-        if direction == "left":
-            delta = timedelta(days=-1)
-        elif direction == "right":
-            delta = timedelta(days=1)
-        elif direction == "up":
-            delta = timedelta(days=-7)
-        elif direction == "down":
-            delta = timedelta(days=7)
-        else:
-            return
-
-        new_date = current_date + delta
-
-        try:
-            event_to_move.path.unlink(missing_ok=True)
-            self.app.indexer.create_note(
-                target_date=new_date,
-                title=event_to_move.title,
-                status=event_to_move.status,
-                tags=event_to_move.tags,
-            )
-        except Exception as e:
-            self.app.notify(f"Ошибка переноса файла: {e}", severity="error")
-            return
-
-        self.app.selected_date = new_date
-
-        if new_date.year != self.current_year or new_date.month != self.current_month:
-            self.current_year = new_date.year
-            self.current_month = new_date.month
-        else:
-            self.rebuild_grid()
-
-        self.app.call_later(self._restore_note_focus, event_to_move.title)
-
-    def _restore_note_focus(self, target_title: str) -> None:
-        """Ищет перенесенную заметку в новой ячейке и выделяет её."""
-        active_cell = self.get_active_cell()
-        if not active_cell or not active_cell.events:
-            return
-
-        for idx, event in enumerate(active_cell.events):
-            if event.title == target_title:
-                active_cell.focused_idx = idx
-
-                if idx >= active_cell.max_visible:
-                    active_cell.note_offset = idx - active_cell.max_visible + 1
-                else:
-                    active_cell.note_offset = 0
-
-                active_cell.render_events()
-                break
