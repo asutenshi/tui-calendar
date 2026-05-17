@@ -12,6 +12,48 @@ class NotesIndexer:
         self.directory = Path(directory).expanduser().resolve()
         self.directory.mkdir(parents=True, exist_ok=True)
 
+    def get_note(self, file_path: Path):
+        if not file_path.exists():
+            return None
+
+        try:
+            post = frontmatter.load(file_path)
+
+            if "date" not in post.metadata:
+                return None
+
+            data = dict(post.metadata)
+            data["path"] = file_path
+
+            if not data.get("title"):
+                data["title"] = file_path.stem
+
+            event_obj = Event(**data)
+
+        except Exception as e:
+            print(f"Ошибка при чтении файла {file_path.name}: {e}")
+            return None
+
+        return event_obj
+
+    def update_note(self, event: Event):
+        if not event.path.exists():
+            return False
+
+        try:
+            post = frontmatter.load(event.path)
+            post.metadata["date"] = event.date
+            post.metadata["title"] = event.title
+            post.metadata["status"] = event.status
+            post.metadata["tags"] = event.tags
+
+            with open(event.path, "wb") as file:
+                frontmatter.dump(post, file)
+            return True
+        except Exception as e:
+            print(f"Не удалось прочитать файл {event.path.name}: {e}")
+            return False
+
     def get_events(self) -> list[Event]:
         events = []
 
@@ -74,3 +116,16 @@ class NotesIndexer:
             frontmatter.dump(post, f)
 
         return file_path
+
+    def delete_note(self, file_path: Path) -> bool:
+        """Удаляет файл заметки. Возвращает True при успехе, False если файла нет."""
+        if not file_path.is_file():
+            return False
+
+        try:
+            file_path.unlink()
+            return True
+        except Exception as e:
+            # На случай, если нет прав доступа
+            print(f"Ошибка при удалении {file_path}: {e}")
+            return False

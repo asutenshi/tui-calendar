@@ -1,66 +1,66 @@
-# Руководство по разработке (CONTRIBUTING)
+# Contributing Guidelines (CONTRIBUTING)
 
-Добро пожаловать в проект! Мы ценим ваш вклад. Чтобы процесс разработки был приятным и эффективным, пожалуйста, следуйте этим правилам.
+Welcome to the project! We appreciate your interest in contributing. To make the development process smooth and effective, please follow these guidelines.
 
-## 1. Подготовка окружения
+## 1. Environment Setup
 
-Для проекта требуется **Python 3.12**.
+This project requires **Python 3.12**.
 
-1. Клонируйте репозиторий.
-2. Создайте виртуальное окружение:
+1. **Clone the repository.**
+2. **Create a virtual environment:**
    ```bash
    python -m venv venv
    ```
-3. Активируйте его:
+3. **Activate it:**
    - Windows: `venv\Scripts\activate`
    - Linux/macOS: `source venv/bin/activate`
-4. Установите проект в режиме редактирования со всеми зависимостями для разработки:
+4. **Install the project in editable mode** with all development dependencies:
    ```bash
    pip install -e ".[dev]"
    ```
 
-## 2. Код-стайл и инструменты
+## 2. Code Style and Tools
 
-Мы используем **Ruff** для линтинга и форматирования кода. Все правила настроены в `pyproject.toml`.
+We use **Ruff** for linting and code formatting. All rules are configured in `pyproject.toml`.
 
-- Проверить код на ошибки: `ruff check .`
-- Автоматически отформатировать код: `ruff format .`
+- **Check for errors:** `ruff check .`
+- **Format code automatically:** `ruff format .`
 
-**Важно:** Перед созданием Pull Request убедитесь, что `ruff check` не находит ошибок.
+**Important:** Before creating a Pull Request, ensure that `ruff check` passes without any errors.
 
-## 3. Стандарт коммитов
+## 3. Commit Standards
 
-Мы используем [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). Каждое сообщение должно начинаться с типа задачи:
+We follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) standard. Every commit message must start with a type:
 
-- `feat:` — новая функциональность.
-- `fix:` — исправление багов.
-- `docs:` — изменения в документации.
-- `build:` — изменения в `pyproject.toml` или зависимостях.
-- `refactor:` — изменение кода без смены логики.
-- `chore:` — технические задачи (создание папок, конфигов).
+- `feat:` — new functionality.
+- `fix:` — bug fixes.
+- `docs:` — changes in documentation.
+- `build:` — changes to `pyproject.toml` or dependencies.
+- `refactor:` — code changes that neither fix a bug nor add a feature.
+- `chore:` — maintenance tasks (creating folders, config files, etc.).
 
-**Пример:** `feat(ui): add keybinding for month view switch`
+**Example:** `feat(ui): add keybinding for month view switch`
 
-## 4. Рабочий процесс (Workflow)
+## 4. Workflow
 
-1. Выберите задачу (Issue) в GitHub.
-2. Создайте новую ветку от `main` с понятным названием:
+1. **Pick an Issue** on GitHub.
+2. **Create a new branch** from `main` with a descriptive name:
    - `feature/issue-id-description`
    - `fix/issue-id-description`
-3. Напишите код, следуя [Спецификации данных](docs/data_spec.md).
-4. Запустите тесты (если они есть): `pytest`.
-5. Создайте **Pull Request (PR)**. В описании PR укажите `Closes #ID_задачи`.
+3. **Write your code**, following the [Data Specification](docs/data_spec.md).
+4. **Run tests** (if any): `pytest`.
+5. **Create a Pull Request (PR)**. In the PR description, include `Closes #Issue_ID`.
 
-## 5. Структура проекта
+## 5. Project Structure
 
-Используется `src` layout:
-- `src/tui_calendar/ui/` — всё, что связано с отрисовкой (Textual).
-- `src/tui_calendar/core/` — логика, парсинг, работа с файлами.
-- `tests/` — юнит-тесты.
-- `examples/` — тестовые Markdown-файлы для отладки.
+We use the `src` layout:
+- `src/tui_calendar/ui/` — everything related to rendering (Textual).
+- `src/tui_calendar/core/` — logic, parsing, and file management.
+- `tests/` — unit tests.
+- `examples/` — sample Markdown files for debugging and testing.
 
-## 6. Коммуникация
+## 6. Communication
 
-Если у вас возникли вопросы по реализации:
-1. Пишите комментарий в соответствующем Issue.
-2. Если нужно изменить MVP или спецификацию данных, создайте обсуждение в GitHub.
+If you have questions regarding the implementation:
+1. **Leave a comment** in the corresponding Issue.
+2. If you need to suggest changes to the **MVP** or **Data Specification**, start a new **Discussion** on GitHub.

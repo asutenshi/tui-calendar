@@ -22,7 +22,8 @@ classifiers = [
 dependencies = [
     "textual>=0.80.0",
     "python-frontmatter",
-    "pydantic"
+    "pydantic",
+    "watchdog"
 ]
 
 [project.optional-dependencies]
