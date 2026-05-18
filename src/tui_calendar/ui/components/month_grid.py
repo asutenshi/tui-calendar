@@ -142,6 +142,8 @@ class MonthGrid(Static):
         Binding("J", "move_note('down')", "Move 1 week forward", show=False),
         Binding("K", "move_note('up')", "Move 1 week back", show=False),
         Binding("L", "move_note('right')", "Move 1 day forward", show=False),
+        # Создание новой метки
+        Binding("n", "create_note", "New Note", show=True),
     ]
 
     DEFAULT_CSS = """
@@ -582,3 +584,24 @@ class MonthGrid(Static):
                 except Exception:
                     pass
                 break
+    
+
+    def action_create_note(self) -> None:
+        """Creates a new note for the selected day and opens it in an external editor."""
+
+        target_date = self.app.selected_date  
+
+        try:
+            new_note_path = self.app.indexer.create_note(target_date=target_date)
+        except Exception as e:
+            self.notify(f"Failed to create note file: {e}", severity="error")
+            return
+
+        with self.app.suspend():
+            self.app.indexer.open_file_in_editor(new_note_path)
+
+        self.rebuild_grid()
+
+        self.set_timer(0.1, lambda: self._restore_note_focus("New Event"))
+        
+        self.notify(f"Note for {target_date} saved successfully!")

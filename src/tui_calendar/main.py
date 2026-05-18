@@ -57,7 +57,7 @@ class TuiCalApp(App):
         Binding("d", "switch_view('day')", "Day"),
         Binding("t", "go_today", "Today"),
         Binding("enter", "open_editor", "Open/Focus"),
-        Binding("n","create_note","New Note"),
+        Binding("n", "create_note", "New Note", show=True),
     ]
 
     def __init__(self):
@@ -163,61 +163,22 @@ class TuiCalApp(App):
         elif current_view == "day":
             self.query_one("#day").rebuild_day()
     
-    async def action_create_note(self) -> None:
-
-        active_cell = None
-        try:
-            month_grid = self.query_one("MonthGrid")
-            active_cell = month_grid.get_active_cell()
-        except Exception:
-            return
-
-        if not active_cell:
-            self.notify("No day selected for creating a note", severity="warning")
-            return
-
-        target_date = getattr(active_cell, "cell_date", None)
-        if not target_date:
-            self.notify("Could not determine the selected date", severity="error")
-            return
-
-        try:
-            file_path = self.indexer.create_note(target_date)
-        except Exception as e:
-            self.notify(f"Core error: {e}", severity="error")
-            return
-
-        if not file_path or not file_path.exists():
-            self.notify("Note file was not created by core", severity="error")
-            return
-
-        default_editor = "notepad" if sys.platform == "win32" else "nano"
-        editor = os.environ.get("EDITOR", default_editor)
-
-        with self.suspend():
-            try:
-                subprocess.run([editor, str(file_path)], check=True)
-            except Exception as e:
-                self.notify(f"Editor error: {e}", severity="error")
-                return
-
-        month_grid.rebuild_grid()
+    def action_create_note(self) -> None:
+        """Создает новую заметку на выбранный день и открывает её в $EDITOR."""
         
-        new_active = month_grid.get_active_cell()
-        if new_active and new_active.events:
-            new_active.focused_idx = max(0, len(new_active.events) - 1)
-            new_active.note_offset = max(0, new_active.focused_idx - new_active.max_visible + 1)
-            month_grid.cell_states[target_date] = {
-                "focused_idx": new_active.focused_idx,
-                "note_offset": new_active.note_offset,
-            }
-
-        month_grid.is_day_focus_mode = True
-        month_grid.focus()
-        if new_active:
-            new_active.render_events()
+        target_date = self.selected_date
+        
+        new_note_path = self.indexer.create_note(target_date=target_date)
+       
+        with self.suspend():
+            updated_events = self.indexer.open_file_in_editor(new_note_path)
             
-        self.notify(f"Note for {target_date.strftime('%Y-%m-%d')} successfully created")
+        self.events = updated_events
+        
+        try:
+            self.query_one("MonthGrid").refresh(layout=True)
+        except Exception:
+            pass
 
 
 def run():
