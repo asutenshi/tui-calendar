@@ -76,8 +76,20 @@ class TuiCalApp(App):
         yield Footer()
 
     def action_switch_view(self, view_id: str) -> None:
-        """Переключает текущий вид."""
+        """Переключает текущий вид и принудительно перерисовывает его."""
         self.query_one("#view-switcher", ContentSwitcher).current = view_id
+        
+        try:
+            if view_id == "month":
+                self.query_one("#month").rebuild_grid()
+            elif view_id == "week":
+                self.query_one("#week").rebuild_week()
+            elif view_id == "day":
+                self.query_one("#day").rebuild_day()
+        except Exception:
+            pass
+            
+        # 3. Передаем фокус
         self.query_one(f"#{view_id}").focus()
 
     def watch_selected_date(self, old_val: date, new_val: date) -> None:
@@ -103,26 +115,28 @@ class TuiCalApp(App):
     def action_exit_focus(self) -> None:
         """Выходит из режима фокуса внутри дня."""
         current_view = self.query_one("#view-switcher").current
-        if current_view == "month":
-            month_grid = self.query_one("#month")
-            month_grid.is_day_focus_mode = False
+        
+        if current_view in ("month", "week"):
+            grid = self.query_one(f"#{current_view}")
+            grid.is_day_focus_mode = False
 
-            active_cell = month_grid.get_active_cell()
+            active_cell = grid.get_active_cell()
             if active_cell:
                 active_cell.render_events()
 
     def action_open_editor(self) -> None:
+        """Входит в режим фокуса или открывает редактор."""
         current_view = self.query_one("#view-switcher").current
 
-        if current_view == "month":
-            month_grid = self.query_one("#month")
-            active_cell = month_grid.get_active_cell()
+        if current_view in ("month", "week"):
+            grid = self.query_one(f"#{current_view}")
+            active_cell = grid.get_active_cell()
 
             if not active_cell or not active_cell.events:
                 return
 
-            if not month_grid.is_day_focus_mode:
-                month_grid.is_day_focus_mode = True
+            if not grid.is_day_focus_mode:
+                grid.is_day_focus_mode = True
                 active_cell.render_events()
                 return
             else:
@@ -131,35 +145,36 @@ class TuiCalApp(App):
                 
                 saved_idx = active_cell.focused_idx
                 saved_offset = active_cell.note_offset
-                saved_date = active_cell.cell_date
+                
+                saved_date = getattr(active_cell, "cell_date", getattr(active_cell, "date", None))
 
                 with self.suspend():
                     self.indexer.open_file_in_editor(file_path)
 
-                month_grid.rebuild_grid()
+                if current_view == "month":
+                    grid.rebuild_grid()
+                elif current_view == "week":
+                    grid.rebuild_week()
                 
-                new_active = month_grid.get_active_cell()
-                if new_active and saved_date == new_active.cell_date:
+                new_active = grid.get_active_cell()
+                new_active_date = getattr(new_active, "cell_date", getattr(new_active, "date", None))
+
+                if new_active and saved_date == new_active_date:
                     max_idx = max(0, len(new_active.events) - 1)
                     new_active.focused_idx = min(saved_idx, max_idx)
                     
                     max_offset = max(0, len(new_active.events) - new_active.max_visible)
                     new_active.note_offset = min(saved_offset, max_offset)
                     
-                    month_grid.cell_states[saved_date] = {
+                    grid.cell_states[saved_date] = {
                         "focused_idx": new_active.focused_idx,
                         "note_offset": new_active.note_offset,
                     }
                     
-                month_grid.is_day_focus_mode = True
-                month_grid.focus()
+                grid.is_day_focus_mode = True
+                grid.focus()
                 if new_active:
                     new_active.render_events()
-
-        elif current_view == "week":
-            self.query_one("#week").rebuild_week()
-        elif current_view == "day":
-            self.query_one("#day").rebuild_day()
     
     def action_create_note(self) -> None:
         """Создает новую заметку на выбранный день и открывает её в $EDITOR."""
@@ -170,8 +185,12 @@ class TuiCalApp(App):
         with self.suspend():
             self.indexer.open_file_in_editor(new_note_path)
             
+        current_view = self.query_one("#view-switcher").current
         try:
-            self.query_one("#month").rebuild_grid()
+            if current_view == "month":
+                self.query_one("#month").rebuild_grid()
+            elif current_view == "week":
+                self.query_one("#week").rebuild_week()
         except Exception:
             pass
 
