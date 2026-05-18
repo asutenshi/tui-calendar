@@ -9,6 +9,7 @@ from textual.binding import Binding
 from textual.reactive import reactive
 from textual.widgets import ContentSwitcher, Footer, Header
 
+from tui_calendar.core.config import ConfigManager
 from tui_calendar.core.indexer import NotesIndexer
 from tui_calendar.ui.components.day_view import DayView
 from tui_calendar.ui.components.month_grid import MonthGrid
@@ -20,9 +21,6 @@ class TuiCalApp(App):
 
     selected_date = reactive(date.today())
 
-    def on_mount(self) -> None:
-        """Инициализация индексатора при старте приложения."""
-        self.indexer = NotesIndexer("./notes")
        
     TITLE = "TUI Calendar"
     MONTH_NAMES = [
@@ -64,8 +62,8 @@ class TuiCalApp(App):
         super().__init__()
         notes_dir = Path("notes")
         self.indexer = NotesIndexer(notes_dir)
+        self.config_manager = ConfigManager(notes_dir)
 
-    selected_date = reactive(date.today())
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -167,16 +165,13 @@ class TuiCalApp(App):
         """Создает новую заметку на выбранный день и открывает её в $EDITOR."""
         
         target_date = self.selected_date
-        
         new_note_path = self.indexer.create_note(target_date=target_date)
        
         with self.suspend():
-            updated_events = self.indexer.open_file_in_editor(new_note_path)
+            self.indexer.open_file_in_editor(new_note_path)
             
-        self.events = updated_events
-        
         try:
-            self.query_one("MonthGrid").refresh(layout=True)
+            self.query_one("#month").rebuild_grid()
         except Exception:
             pass
 
