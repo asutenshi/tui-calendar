@@ -6,6 +6,7 @@ from pathlib import Path
 import frontmatter
 from pydantic import ValidationError
 
+from .config import ConfigManager
 from .model import Event
 
 
@@ -13,6 +14,7 @@ class NotesIndexer:
     def __init__(self, directory: str | Path):
         self.directory = Path(directory).expanduser().resolve()
         self.directory.mkdir(parents=True, exist_ok=True)
+        self.config = ConfigManager(self.directory)
 
     def get_note(self, file_path: Path):
         if not file_path.exists():
