@@ -1,44 +1,51 @@
 # 📅 TUI Calendar-Task Manager
 
-Эстетичный и быстрый терминальный календарь для тех, кто живет в консоли и ценит Vim-style управление.
+An aesthetic and fast terminal-based calendar for those who live in the console and appreciate Vim-style control.
 
-Проект объединяет удобство классического календаря и гибкость Markdown-заметок. Все данные хранятся локально в `.md` файлах с YAML frontmatter, что делает приложение полностью совместимым с **Obsidian**, **Logseq** или простым **Neovim/Vim**.
+This project combines the convenience of a classic calendar with the flexibility of Markdown notes. All data is stored locally in `.md` files with YAML frontmatter, making the app fully compatible with **Obsidian**, **Logseq**, or your favorite **Vim/Neovim** setup.
 
-## ✨ Основные особенности
+## ✨ Key Features
 
-- **Vim-style навигация**: Перемещение по дням с помощью `h`, `j`, `k`, `l`.
-- **Markdown-backed**: Каждое событие — это отдельный файл. Никаких закрытых баз данных.
-- **Гибкие виды**: Месяц (сетка), Неделя (колонки) и День (список дел).
-- **Интеграция с $EDITOR**: Открывайте заметки мгновенно в вашем любимом редакторе.
-- **Поддержка iCal**: {Подключение внешних расписаний через ics-ссылки}.
+- **Vim-style Navigation**: Move through days and weeks seamlessly using `h`, `j`, `k`, `l`.
+- **Markdown-backed**: Every event is a plain-text file. No proprietary databases, no vendor lock-in.
+- **Seamless Views**: Switch between Month (grid) and Week (columns) layouts.
+- **$EDITOR Integration**: Open and edit your notes instantly in your system's editor (Vim, Nano, etc.).
+- **Knowledge Base Ready**: Designed to work as a part of your existing second brain (compatible with Obsidian/Logseq).
 
-## 🛠 Технологический стек
+## 🛠 Tech Stack
 
 - **Language:** Python 3.12+
 - **UI Framework:** [Textual](https://textual.textualize.io/)
-- **Data Format:** Markdown + YAML Frontmatter
+- **Data Format:** Markdown (.md) + YAML Frontmatter
 
-## 🚀 Быстрый старт
+## 🚀 Quick Start
 
-> **Примечание:** Проект находится в стадии активной разработки (MVP).
+> **Note:** This project is currently in the MVP (active development) stage.
 
-1. Установите зависимости:
+1. **Install dependencies:**
    ```bash
    pip install .
    ```
-2. Запустите приложение:
+
+2. **Run the application:**
    ```bash
    tcal
    ```
 
-## ⌨️ Горячие клавиши (Keymap)
+## ⌨️ Keymap Specification
 
-- `h`, `j`, `k`, `l` — Навигация (влево, вниз, вверх, вправо).
-- `m`, `w`, `d` — Переключение видов: Месяц / Неделя / День.
-- `c` / `n` — Создать новую заметку на выбранную дату.
-- `Enter` — Открыть файл в системном редакторе.
-- `q` — Выход.
+- `h`, `j`, `k`, `l` — **Navigate** (Left, Down, Up, Right).
+- `m`, `w` — **Switch views**: Month / Week.
+- `t` — Go to **Today**.
+- `n` — Create a **New note** for the selected date.
+- `d` — **Delete** focused note.
+- `shift + h / l` — **Move note** date (previous/next day).
+- `Enter` — **Focus** on a day or **Open** file in your `$EDITOR`.
+- `q` — **Quit** application.
 
-## 🤝 Разработка
+## 🤝 Contributing
 
-Если вы хотите внести свой вклад в проект, пожалуйста, ознакомьтесь с нашим [CONTRIBUTING.md](./CONTRIBUTING.md).
+We welcome contributions! Before you start, please read our [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code style, commit standards, and development workflow.
+
+---
+*Inspired by Vim and the spirit of plain-text productivity.*

@@ -1,4 +1,5 @@
 from datetime import date
+from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -47,12 +48,20 @@ class TuiCalApp(App):
 
     BINDINGS = [
         Binding("q", "quit", "Quit"),
+        Binding("escape", "exit_focus", "Exit Focus"),
         Binding("m", "switch_view('month')", "Month"),
         Binding("w", "switch_view('week')", "Week"),
         Binding("d", "switch_view('day')", "Day"),
         Binding("t", "go_today", "Today"),
-        Binding("enter", "open_editor", "Open in Editor"), 
+        Binding("enter", "open_editor", "Open/Focus"),
     ]
+
+    def __init__(self):
+        super().__init__()
+        notes_dir = Path("notes")
+        self.indexer = NotesIndexer(notes_dir)
+
+    selected_date = reactive(date.today())
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -88,22 +97,43 @@ class TuiCalApp(App):
             self.query_one("#week").rebuild_week()
         elif current_view == "day":
             self.query_one("#day").rebuild_day()
-    
-    def action_open_editor(self) -> None:
-        """Открывает существующую заметку в редакторе по нажатию Enter."""
-        events = self.indexer.get_event_for_range(self.selected_date, self.selected_date)
-        
-        if not events:
-            return
-            
-        file_path = events[0].path
 
-        with self.suspend():
-            self.indexer.open_file_in_editor(file_path)
-
+    def action_exit_focus(self) -> None:
+        """Выходит из режима фокуса внутри дня."""
         current_view = self.query_one("#view-switcher").current
         if current_view == "month":
-            self.query_one("#month").rebuild_grid()
+            month_grid = self.query_one("#month")
+            month_grid.is_day_focus_mode = False
+
+            active_cell = month_grid.get_active_cell()
+            if active_cell:
+                active_cell.render_events()
+
+    def action_open_editor(self) -> None:
+        """Переходит в режим фокуса или открывает заметку в редакторе."""
+        current_view = self.query_one("#view-switcher").current
+
+        if current_view == "month":
+            month_grid = self.query_one("#month")
+            active_cell = month_grid.get_active_cell()
+
+            if not active_cell or not active_cell.events:
+                return
+
+            if not month_grid.is_day_focus_mode:
+                month_grid.is_day_focus_mode = True
+                active_cell.render_events()
+                return
+
+            else:
+                idx = active_cell.focused_idx
+                file_path = active_cell.events[idx].path
+
+                with self.suspend():
+                    self.indexer.open_file_in_editor(file_path)
+
+                month_grid.rebuild_grid()
+
         elif current_view == "week":
             self.query_one("#week").rebuild_week()
         elif current_view == "day":
