@@ -24,6 +24,6 @@ def test_get_tag_colors_safe_read(tmp_path):
     with open(manager.config_path, "w") as file:
         file.write("ui: \n  some_other_setting: true")
 
-    colors = manager.get_tag_colors()
+    colors = manager.get_tag_color()
 
     assert colors == {}
