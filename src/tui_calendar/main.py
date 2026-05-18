@@ -60,13 +60,13 @@ class TuiCalApp(App):
         Binding("w", "switch_view('week')", "Week"),
         Binding("d", "switch_view('day')", "Day"),
         Binding("t", "go_today", "Today"),
-        Binding("enter", "open_editor", "Open/Focus"), 
+        Binding("enter", "open_editor", "Open/Focus"),
     ]
 
     def __init__(self):
-        super().__init__() 
-        notes_dir = Path("notes") 
-        self.indexer = NotesIndexer(notes_dir) 
+        super().__init__()
+        notes_dir = Path("notes")
+        self.indexer = NotesIndexer(notes_dir)
 
     selected_date = reactive(date.today())
 
@@ -112,7 +112,7 @@ class TuiCalApp(App):
         if current_view == "month":
             month_grid = self.query_one("#month")
             month_grid.is_day_focus_mode = False
-            
+
             active_cell = month_grid.get_active_cell()
             if active_cell:
                 active_cell.render_events()
@@ -120,7 +120,7 @@ class TuiCalApp(App):
     def action_open_editor(self) -> None:
         """Переходит в режим фокуса или открывает заметку в редакторе."""
         current_view = self.query_one("#view-switcher").current
-        
+
         if current_view == "month":
             month_grid = self.query_one("#month")
             active_cell = month_grid.get_active_cell()
@@ -132,7 +132,7 @@ class TuiCalApp(App):
                 month_grid.is_day_focus_mode = True
                 active_cell.render_events()
                 return
-            
+
             else:
                 idx = active_cell.focused_idx
                 file_path = active_cell.events[idx].path
@@ -141,7 +141,7 @@ class TuiCalApp(App):
                     self.indexer.open_file_in_editor(file_path)
 
                 month_grid.rebuild_grid()
-                
+
         elif current_view == "week":
             self.query_one("#week").rebuild_week()
         elif current_view == "day":
