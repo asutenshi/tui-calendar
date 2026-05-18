@@ -54,6 +54,7 @@ class TuiCalApp(App):
         Binding("d", "switch_view('day')", "Day"),
         Binding("t", "go_today", "Today"),
         Binding("enter", "open_editor", "Open/Focus"),
+        Binding("n","create_note","New Note"),
     ]
 
     def __init__(self):
@@ -110,7 +111,6 @@ class TuiCalApp(App):
                 active_cell.render_events()
 
     def action_open_editor(self) -> None:
-        """Переходит в режим фокуса или открывает заметку в редакторе."""
         current_view = self.query_one("#view-switcher").current
 
         if current_view == "month":
@@ -124,20 +124,100 @@ class TuiCalApp(App):
                 month_grid.is_day_focus_mode = True
                 active_cell.render_events()
                 return
-
             else:
                 idx = active_cell.focused_idx
                 file_path = active_cell.events[idx].path
+                
+                saved_idx = active_cell.focused_idx
+                saved_offset = active_cell.note_offset
+                saved_date = active_cell.cell_date
 
                 with self.suspend():
                     self.indexer.open_file_in_editor(file_path)
 
                 month_grid.rebuild_grid()
+                
+                new_active = month_grid.get_active_cell()
+                if new_active and saved_date == new_active.cell_date:
+                    max_idx = max(0, len(new_active.events) - 1)
+                    new_active.focused_idx = min(saved_idx, max_idx)
+                    
+                    max_offset = max(0, len(new_active.events) - new_active.max_visible)
+                    new_active.note_offset = min(saved_offset, max_offset)
+                    
+                    month_grid.cell_states[saved_date] = {
+                        "focused_idx": new_active.focused_idx,
+                        "note_offset": new_active.note_offset,
+                    }
+                    
+                month_grid.is_day_focus_mode = True
+                month_grid.focus()
+                if new_active:
+                    new_active.render_events()
 
         elif current_view == "week":
             self.query_one("#week").rebuild_week()
         elif current_view == "day":
             self.query_one("#day").rebuild_day()
+    
+    async def action_create_note(self) -> None:
+        import os
+        import sys
+        import subprocess
+
+        active_cell = None
+        try:
+            month_grid = self.query_one("MonthGrid")
+            active_cell = month_grid.get_active_cell()
+        except Exception:
+            return
+
+        if not active_cell:
+            self.notify("No day selected for creating a note", severity="warning")
+            return
+
+        target_date = getattr(active_cell, "cell_date", None)
+        if not target_date:
+            self.notify("Could not determine the selected date", severity="error")
+            return
+
+        try:
+            file_path = self.indexer.create_note(target_date)
+        except Exception as e:
+            self.notify(f"Core error: {e}", severity="error")
+            return
+
+        if not file_path or not file_path.exists():
+            self.notify("Note file was not created by core", severity="error")
+            return
+
+        default_editor = "notepad" if sys.platform == "win32" else "nano"
+        editor = os.environ.get("EDITOR", default_editor)
+
+        with self.suspend():
+            try:
+                subprocess.run([editor, str(file_path)], check=True)
+            except Exception as e:
+                self.notify(f"Editor error: {e}", severity="error")
+                return
+
+        month_grid.rebuild_grid()
+        
+        new_active = month_grid.get_active_cell()
+        if new_active and new_active.events:
+            new_active.focused_idx = max(0, len(new_active.events) - 1)
+            new_active.note_offset = max(0, new_active.focused_idx - new_active.max_visible + 1)
+            month_grid.cell_states[target_date] = {
+                "focused_idx": new_active.focused_idx,
+                "note_offset": new_active.note_offset,
+            }
+
+        month_grid.is_day_focus_mode = True
+        month_grid.focus()
+        if new_active:
+            new_active.render_events()
+            
+        self.notify(f"Note for {target_date.strftime('%Y-%m-%d')} successfully created")
 
 
 def run():

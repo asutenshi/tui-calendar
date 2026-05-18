@@ -456,7 +456,6 @@ class MonthGrid(Static):
         self.app.push_screen(DeleteConfirmDialog(event_to_delete.title), check_deletion)
 
     def action_move_note(self, direction: str) -> None:
-        """Перемещает заметку на другой день с помощью Shift+hjkl."""
         if not getattr(self, "is_day_focus_mode", False):
             return
 
@@ -500,18 +499,16 @@ class MonthGrid(Static):
                     counter += 1
 
                 old_path.rename(new_path)
-
                 event_to_move.path = new_path
 
         except Exception as e:
-            self.app.notify(f"Error moving note: {e}", severity="error")
+            self.app.notify(f"Move error: {e}", severity="error")
             return
 
         if new_date.year != self.current_year or new_date.month != self.current_month:
             self.app.selected_date = new_date
             self.current_year = new_date.year
             self.current_month = new_date.month
-
             self.set_timer(0.1, lambda: self._restore_note_focus(event_to_move.title))
             return
 
@@ -544,10 +541,8 @@ class MonthGrid(Static):
                 pass
 
             dest_cell.events.append(event_to_move)
-
             self.app.selected_date = new_date
             self._update_focus()
-
             self.is_day_focus_mode = True
             self.app.call_later(self._restore_note_focus, event_to_move.title)
 
