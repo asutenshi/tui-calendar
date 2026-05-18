@@ -1,3 +1,6 @@
+import os
+import sys
+import subprocess
 from datetime import date
 from pathlib import Path
 
@@ -161,9 +164,6 @@ class TuiCalApp(App):
             self.query_one("#day").rebuild_day()
     
     async def action_create_note(self) -> None:
-        import os
-        import sys
-        import subprocess
 
         active_cell = None
         try:
