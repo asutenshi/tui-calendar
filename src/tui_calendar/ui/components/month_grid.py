@@ -481,12 +481,16 @@ class MonthGrid(Static):
         new_date = current_date + delta
 
         try:
-            event_to_move.date = new_date
-            self.app.indexer.update_note(event_to_move)
-
             old_path = event_to_move.path
+            raw_content = ""
+            if old_path.exists():
+                raw_content = old_path.read_text(encoding="utf-8")
+
+            event_to_move.date = new_date
+
             old_date_str = str(current_date)
             new_date_str = str(new_date)
+            new_path = old_path
 
             if old_path.name.startswith(old_date_str):
                 new_name = old_path.name.replace(old_date_str, new_date_str, 1)
@@ -498,8 +502,13 @@ class MonthGrid(Static):
                     new_path = base_new_path.with_stem(f"{base_new_path.stem}_{counter}")
                     counter += 1
 
-                old_path.rename(new_path)
-                event_to_move.path = new_path
+            new_path.write_text(raw_content, encoding="utf-8")
+            event_to_move.path = new_path
+
+            if old_path != new_path and old_path.exists():
+                old_path.unlink()
+
+            self.app.indexer.update_note(event_to_move)
 
         except Exception as e:
             self.app.notify(f"Move error: {e}", severity="error")
