@@ -1,3 +1,5 @@
+import os
+import subprocess
 from datetime import date
 from pathlib import Path
 
@@ -49,11 +51,11 @@ class NotesIndexer:
             post.metadata["status"] = event.status
             post.metadata["tags"] = event.tags
 
-            with open(event.path, "wb") as file:
-                frontmatter.dump(post, file)
+            event.path.write_text(frontmatter.dumps(post), encoding='utf-8')
             return True
+            
         except Exception as e:
-            print(f"Не удалось прочитать файл {event.path.name}: {e}")
+            print(f"Не удалось обновить файл {event.path.name}: {e}")
             return False
 
     def get_events(self) -> list[Event]:
@@ -114,8 +116,7 @@ class NotesIndexer:
             content="# " + title, date=target_date, title=title, status=status, tags=tags
         )
 
-        with open(file_path, "wb") as f:
-            frontmatter.dump(post, f)
+        file_path.write_text(frontmatter.dumps(post), encoding='utf-8')
 
         return file_path
 
@@ -128,6 +129,20 @@ class NotesIndexer:
             file_path.unlink()
             return True
         except Exception as e:
-            # На случай, если нет прав доступа
             print(f"Ошибка при удалении {file_path}: {e}")
             return False
+
+    def open_file_in_editor(self, file_path: Path):
+        """
+        Открывает файл в редакторе, определенном в $EDITOR.
+
+        Args:
+            file_path: Путь к файлу для открытия.
+        """
+        editor = os.environ.get("EDITOR", "nano")
+        try:
+            subprocess.run([editor, str(file_path)], check=True)
+        except FileNotFoundError:
+            raise
+
+        return self.get_events()

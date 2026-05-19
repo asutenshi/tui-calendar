@@ -456,7 +456,6 @@ class MonthGrid(Static):
         self.app.push_screen(DeleteConfirmDialog(event_to_delete.title), check_deletion)
 
     def action_move_note(self, direction: str) -> None:
-        """Перемещает заметку на другой день с помощью Shift+hjkl."""
         if not getattr(self, "is_day_focus_mode", False):
             return
 
@@ -482,12 +481,16 @@ class MonthGrid(Static):
         new_date = current_date + delta
 
         try:
-            event_to_move.date = new_date
-            self.app.indexer.update_note(event_to_move)
-
             old_path = event_to_move.path
+            raw_content = ""
+            if old_path.exists():
+                raw_content = old_path.read_text(encoding="utf-8")
+
+            event_to_move.date = new_date
+
             old_date_str = str(current_date)
             new_date_str = str(new_date)
+            new_path = old_path
 
             if old_path.name.startswith(old_date_str):
                 new_name = old_path.name.replace(old_date_str, new_date_str, 1)
@@ -499,19 +502,22 @@ class MonthGrid(Static):
                     new_path = base_new_path.with_stem(f"{base_new_path.stem}_{counter}")
                     counter += 1
 
-                old_path.rename(new_path)
+            new_path.write_text(raw_content, encoding="utf-8")
+            event_to_move.path = new_path
 
-                event_to_move.path = new_path
+            if old_path != new_path and old_path.exists():
+                old_path.unlink()
+
+            self.app.indexer.update_note(event_to_move)
 
         except Exception as e:
-            self.app.notify(f"Error moving note: {e}", severity="error")
+            self.app.notify(f"Move error: {e}", severity="error")
             return
 
         if new_date.year != self.current_year or new_date.month != self.current_month:
             self.app.selected_date = new_date
             self.current_year = new_date.year
             self.current_month = new_date.month
-
             self.set_timer(0.1, lambda: self._restore_note_focus(event_to_move.title))
             return
 
@@ -544,10 +550,8 @@ class MonthGrid(Static):
                 pass
 
             dest_cell.events.append(event_to_move)
-
             self.app.selected_date = new_date
             self._update_focus()
-
             self.is_day_focus_mode = True
             self.app.call_later(self._restore_note_focus, event_to_move.title)
 

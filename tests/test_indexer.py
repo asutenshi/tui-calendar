@@ -1,4 +1,6 @@
+import os
 from datetime import date
+from unittest.mock import patch
 
 import frontmatter
 import pytest
@@ -45,9 +47,7 @@ def test_create_note_file_exists(indexer):
     """Проверка, что файл физически создается."""
     target_date = date(2026, 11, 7)
     title = "Test Note"
-
     path = indexer.create_note(target_date, title)
-
     assert path.exists()
     assert path.is_file()
 
@@ -56,10 +56,8 @@ def test_create_note_yaml_content(indexer):
     """Проверка, что внутри файла правильный YAML заголовок с дефолтными значениями."""
     target_date = date(2026, 1, 1)
     title = "New Year Party"
-
     path = indexer.create_note(target_date, title)
     post = frontmatter.load(path)
-
     assert post.metadata["title"] == "New Year Party"
     assert post.metadata["date"] == target_date
     assert post.metadata["status"] == "todo"
@@ -75,9 +73,7 @@ def test_create_note_custom_status_and_tags(indexer):
     custom_tags = ["family", "finance", "urgent"]
 
     path = indexer.create_note(target_date, title, status=custom_status, tags=custom_tags)
-
     post = frontmatter.load(path)
-
     assert post.metadata["title"] == "Buy gifts"
     assert post.metadata["status"] == "in_progress"
     assert post.metadata["tags"] == ["family", "finance", "urgent"]
@@ -87,9 +83,7 @@ def test_create_note_slugification(indexer):
     """Проверка очистки имени файла от спецсимволов."""
     target_date = date(2026, 11, 7)
     title = "Hello World!!! @2023"
-
     path = indexer.create_note(target_date, title)
-
     assert " " not in path.name
     assert "@" not in path.name
 
@@ -98,7 +92,6 @@ def test_create_note_collision(indexer):
     """Проверка логики дубликатов (счетчик _1, _2)."""
     target_date = date(2026, 11, 7)
     title = "Meeting"
-
     path1 = indexer.create_note(target_date, title)
     path2 = indexer.create_note(target_date, title)
     path3 = indexer.create_note(target_date, title)
