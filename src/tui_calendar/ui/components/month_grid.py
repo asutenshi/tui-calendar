@@ -6,6 +6,7 @@ from textual.binding import Binding
 from textual.events import Resize
 from textual.reactive import reactive
 from textual.widgets import Static
+from textual.color import Color
 
 from tui_calendar.core.model import Event
 from tui_calendar.ui.screens.dialogs import DeleteConfirmDialog
@@ -62,11 +63,17 @@ class DayCell(Static):
             counter_label.update(f"[{self.focused_idx + 1}/{total}]")
         elif total > 0:
             counter_label.update(f"[0/{total}]")
-
         else:
             counter_label.update("")
 
         visible = self.events[self.note_offset : self.note_offset + self.max_visible]
+
+        try:
+            tag_colors = self.app.config_manager.get_tag_color()
+        except AttributeError:
+            tag_colors = {}
+
+        DEFAULT_HEX_COLOR = "#5c6370" 
 
         for i, event in enumerate(visible):
             actual_idx = self.note_offset + i
@@ -74,6 +81,23 @@ class DayCell(Static):
             focus_class = "-focused" if (actual_idx == self.focused_idx and is_mode_active) else ""
 
             pill = Static(event.title, classes=f"event-pill {status_class} {focus_class}")
+            
+            if not focus_class:
+                hex_color = self._get_event_color(event, tag_colors)
+                
+                if not hex_color:
+                    hex_color = DEFAULT_HEX_COLOR
+                    
+                try:
+                    base_color = Color.parse(hex_color)
+                    
+                    pill.styles.background = base_color.with_alpha(0.15) 
+                    pill.styles.border_left = ("solid", base_color)      
+                    
+                    
+                except Exception:
+                    pass
+
             container.mount(pill)
 
     def on_resize(self, event: Resize) -> None:
@@ -111,6 +135,20 @@ class DayCell(Static):
             pass
 
         self.render_events()
+
+    def _get_event_color(self, event: Event, tag_colors: dict[str, str]) -> str | None:
+        """
+        Возвращает первый найденный hex-цвет для события на основе его тегов.
+        Если совпадений нет, возвращает None (будет использован цвет по умолчанию).
+        """
+        if not event.tags:
+            return None
+            
+        for tag in event.tags:
+            if tag in tag_colors:
+                return tag_colors[tag] 
+                
+        return None
 
 
 class MonthGrid(Static):
@@ -226,7 +264,6 @@ class MonthGrid(Static):
         text-style: bold;
     }
 
-
     .event-pill {
         width: 100%;
         height: 1;
@@ -236,46 +273,15 @@ class MonthGrid(Static):
         overflow-x: hidden;
     }
 
-    .event-pill.-todo {
-        border-left: solid $warning;
-        background: $warning 15%;
-        color: $text;
-    }
-
-    .event-pill.-in_progress {
-        border-left: solid $accent;
-        background: $accent 15%;
-        color: $text;
-    }
-
-    .event-pill.-done {
-        border-left: solid $success;
-        background: $success 15%;
-        color: $text;
-
-    }
-
-    /* СТИЛИ ФОКУСА ЗАМЕТОК */
     .event-pill.-focused {
         background: $primary; 
         color: $background;
         text-style: bold;
     }
 
-    .event-pill.-todo.-focused {
-        background: $warning;
-        color: $background;
-        text-style: bold;
-    }
-
-    .event-pill.-in_progress.-focused {
-        background: $accent;
-        color: $background;
-        text-style: bold;
-    }
-
-    .event-pill.-done.-focused {
-        background: $success;
+    /* СТИЛИ ФОКУСА ЗАМЕТОК */
+    .event-pill.-focused {
+        background: $primary; 
         color: $background;
         text-style: bold;
     }
