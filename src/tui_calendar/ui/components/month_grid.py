@@ -294,11 +294,17 @@ class MonthGrid(Static):
 
     def on_mount(self) -> None:
         self.cell_states: dict[date, dict] = {}
-
         self.day_cells = []
         self.current_year = self.app.selected_date.year
         self.current_month = self.app.selected_date.month
         self.rebuild_grid()
+
+    def on_show(self) -> None:
+        """Срабатывает каждый раз, когда мы возвращаемся с видов Week/Day на Month"""
+        self.current_year = self.app.selected_date.year
+        self.current_month = self.app.selected_date.month
+        self.rebuild_grid() 
+        self.focus()
 
     def watch_is_day_focus_mode(self, old_val: bool, new_val: bool) -> None:
         """Срабатывает автоматически при изменении флажка режима."""
@@ -552,15 +558,17 @@ class MonthGrid(Static):
                 "note_offset": active_cell.note_offset,
             }
 
+            dest_cell.events.append(event_to_move)
+            self.app.selected_date = new_date
+            
+            self._update_focus()
+            self.is_day_focus_mode = True
+
             try:
                 active_cell.render_events()
             except Exception:
                 pass
 
-            dest_cell.events.append(event_to_move)
-            self.app.selected_date = new_date
-            self._update_focus()
-            self.is_day_focus_mode = True
             self.app.call_later(self._restore_note_focus, event_to_move.title)
 
     def _restore_note_focus(self, target_title: str) -> None:
